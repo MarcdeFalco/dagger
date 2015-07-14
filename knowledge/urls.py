@@ -6,4 +6,5 @@ import knowledge.views
 urlpatterns = patterns('knowledge.views',
     url(r'detail/(?P<pk>\d+)/', knowledge.views.AtomDetail.as_view(),
         name='atom_detail'),
+    url(r'', knowledge.views.AtomDAG.as_view(), name='atom_dag'),
     )

@@ -7,3 +7,8 @@ from knowledge.models import *
 class AtomDetail(DetailView):
     model = Atom
     context_object_name = 'atom' 
+
+class AtomDAG(ListView):
+    model = Atom
+    context_object_name = 'atoms' 
+    template_name = 'knowledge/atom_dag.html'
