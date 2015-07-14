@@ -1,0 +1,57 @@
+{% extends 'site_base.html' %}
+{% load atom %}
+{% load comments %}
+
+{% block extra_nav %}
+    <li><a href="{% url 'admin:knowledge_atom_change' atom.id %}?source=main">Editer</a></li>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <h2>
+        <span class="label label-{{ atom.typ.bootstrap_label }}">{{ atom.typ }}</span>
+        {% if atom.name %}{{ atom.name }}{% endif %}
+    </h2>
+</div>
+
+    <div class="well">
+    {{ atom.text|atom_format }}
+    </div>
+
+<div class="page-header">
+    <h2>Relations</h2>
+<div class="row">
+    <div class="col-sm-4">
+        <div class="list-group">
+          {% for rel in atom.to_atoms.all %}
+          <a class="list-group-item list-group-item-{{ rel.from_atom.typ.bootstrap_label }}"
+              href="{{ rel.from_atom.get_absolute_url }}">{{ rel.from_atom }}
+              <b>{{ rel.typ }}</b></a>
+          {% endfor %}
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <ul class="list-group">
+            <li class="list-group-item">{{ atom }}</li>
+        </ul>
+    </div>
+    <div class="col-sm-4">
+        <div class="list-group">
+          {% for rel in atom.from_atoms.all %}
+          <a class="list-group-item list-group-item-{{ rel.to_atom.typ.bootstrap_label }}"
+              href="{{ rel.to_atom.get_absolute_url }}"><b>{{ rel.typ }}</b> {{ rel.to_atom }}</a>
+          {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="page-header">
+    <h2>Commentaires</h2>
+</div>
+
+<div class="well">
+{% render_comment_list for atom %}
+{% render_comment_form for atom %}
+</div>
+
+{% endblock %}

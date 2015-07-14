@@ -1,0 +1,48 @@
+{% extends 'site_base.html' %}
+{% load atom %}
+{% load mptt_tags %}
+
+{% block extra_style %}
+<style>
+.panel-definition {
+    background-color: #eff !important;
+}
+.panel-theoreme {
+    background-color: #ffe !important;
+    font-weight: bold;
+}
+.panel-preuve {
+    background-color: #fee !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_nav %}
+    <li><a href="{% url 'admin:handouts_handout_change' handout.id %}?source=main">Editer</a></li>
+{% endblock %}
+
+{% block body %}
+<h2>{{ handout.lead.name }}</h2>
+{% for node,structure in handout.lead.get_descendants|tree_info %}
+    {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
+    <strong>{{ node.name }}</strong>
+    {% for atom in node.ordered_content %}
+        <div class="panel panel-{{ atom.typ.bootstrap_label }}">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    {{ atom.typ }}
+                    <a href="{{ atom.get_absolute_url }}">
+                    <span class="glyphicon glyphicon-info-sign"></span>
+                    {% if atom.name %}{{ atom.name }}{% endif %}
+                    </a>
+                </h4>
+            </div>
+            {% endcomment %}
+            <div class="panel-body">
+            {{ atom.text|atom_format }}
+            </div>
+        </div>
+    {% endfor %}
+    {% for level in structure.closed_levels %}</li></ul>{% endfor %}
+{% endfor %}
+{% endblock %}
