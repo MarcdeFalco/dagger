@@ -1,0 +1,82 @@
+{% extends 'theme_bootstrap/base.html' %}
+{% block site_brand %}{% endblock %}
+{% block nav %}
+    <ul class="nav navbar-nav">
+        {% block extra_nav %}
+        {% endblock %}
+    </ul>
+{% endblock %}
+{% block extra_script %}
+<script type="text/javascript" src="/static/fluent_comments/js/ajaxcomments.js"></script>
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js">
+        MathJax.Hub.Config({
+            config: ["MMLorHTML.js"],
+            extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js"],
+            jax: ["input/TeX"],
+            tex2jax: {
+                inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+                displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+                processEscapes: false
+            },
+            TeX: {
+                TagSide: "right",
+                TagIndent: ".8em",
+                MultLineWidth: "85%",
+                equationNumbers: {
+                   autoNumber: "AMS",
+                },
+                unicode: {
+                   fonts: "STIXGeneral,'Arial Unicode MS'" 
+                },
+                Macros: {
+                  R: '{\\mathbb{R}}',                // a simple string replacement
+                  classeck: ['{\\mathcal{C}^{#1}(#2,\\R)}', 2],                // a simple string replacement
+                  bold: ['\\boldsymbol{#1}',1],   // this macro has one parameter
+                }
+            },
+            showProcessingMessages: false
+        });
+</script>
+{% endblock %}
+{% block extra_head %}
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jsxgraph/0.99.3/jsxgraphcore.js"></script>
+{% endblock %}
+{% block extra_style %}
+<link rel="stylesheet" type="text/css" href="/static/fluent_comments/css/ajaxcomments.css" />
+<style>
+.jxgbox {
+    /* for IE 7 */
+    position: relative;
+    overflow: hidden;
+    background-color: #ffffff;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #356AA0;
+    border-radius: 10px;
+    -webkit-border-radius: 10px;
+    -ms-touch-action: none;
+}
+
+.JXGtext {
+    /* May produce artefacts in IE. Solution: setting a color explicitly. */
+    background-color: transparent;
+    font-family: Arial, Helvetica, Geneva, sans-serif;
+    padding: 0;
+    margin: 0;
+}
+
+.JXGinfobox {
+    border-style: none;
+    border-width: 1px;
+    border-color: black;
+}
+
+.JXGimage {
+    opacity: 1.0;
+}
+
+.JXGimageHighlight {
+    opacity: 0.6;
+}
+</style>
+{% endblock %}
