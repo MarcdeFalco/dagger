@@ -1,0 +1,9 @@
+{% extends 'site_base.html' %}
+
+{% block body %}
+<div class="list-group">
+    {% for handout in handouts %}
+    <a class="list-group-item" href="{% url 'handout_detail' handout.id %}">{{ handout }}</a>
+    {% endfor %}
+</div>
+{% endblock %}
