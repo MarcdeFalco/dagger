@@ -34,6 +34,9 @@ class Handout(models.Model):
     lead = models.ForeignKey(Paragraph, blank=True, null=True, related_name='handout_as_lead')
     code = models.TextField()
 
+    def __str__(self):
+        return self.lead.name
+
     def save(self, *save_args, **kwargs):
         super(Handout, self).save(*save_args, **kwargs)
         old_lead = self.lead

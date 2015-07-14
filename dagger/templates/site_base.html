@@ -2,6 +2,8 @@
 {% block site_brand %}{% endblock %}
 {% block nav %}
     <ul class="nav navbar-nav">
+        <li><a href="{% url 'atom_dag' %}">Graphe des connaissances</a></li>
+        <li><a href="{% url 'handout_list' %}">Liste des polys</a></li>
         {% block extra_nav %}
         {% endblock %}
     </ul>

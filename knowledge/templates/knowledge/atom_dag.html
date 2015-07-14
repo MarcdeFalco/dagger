@@ -6,6 +6,9 @@
 
 {% block extra_style %}
 <style>
+#viewport.linkable{
+  cursor:pointer;
+}
 </style>
 {% endblock %}
 
@@ -18,17 +21,19 @@
 
   Renderer = function(canvas){
     canvas = $(canvas).get(0)
+    var dom = $(canvas)
     var ctx = canvas.getContext("2d")
     var particleSystem = null
     var gfx = arbor.Graphics(canvas)
 
     var that = {
       init:function(system){
-        particleSystem = system
-        particleSystem.screen({padding:[100, 60, 60, 60], // leave some space at the bottom for the param sliders
-                              step:.02}) // have the ‘camera’ zoom somewhat slowly as the graph unfolds 
-       $(window).resize(that.resize)
-       that.resize()
+      particleSystem = system
+      particleSystem.screen({size:{width:dom.width(), height:dom.height()},
+                    padding:[36,60,36,60]})
+        //step:.02}) // have the ‘camera’ zoom somewhat slowly as the graph unfolds 
+       //$(window).resize(that.resize)
+       //that.resize()
       
        that.initMouseHandling()
       },
@@ -113,173 +118,72 @@
       	nearest = null;
       	var dragged = null;
         var oldmass = 1
+        var scrolling = false
+        var old_pos = null
 
+            
         $(canvas).mousedown(function(e){
       		var pos = $(this).offset();
       		var p = {x:e.pageX-pos.left, y:e.pageY-pos.top}
-      		selected = nearest = dragged = particleSystem.nearest(p);
+            var old_pos = p;
+      		selected = particleSystem.nearest(p);
+            selected = (selected.distance < 50) ? selected : null
 
-      		if (selected.node !== null){
-            dragged.node.tempMass = 50
-            dragged.node.fixed = true
-      		}
+      		if (selected && selected.node !== null){
+                window.open(window.location.host + selected.node.data.url)
+            } else {
+                scrolling = true
+            }
+
       		return false
       	});
 
       	$(canvas).mousemove(function(e){
-          var old_nearest = nearest && nearest.node._id
+            var old_nearest = nearest && nearest.node._id
       		var pos = $(this).offset();
       		var s = {x:e.pageX-pos.left, y:e.pageY-pos.top};
 
       		nearest = particleSystem.nearest(s);
-          if (!nearest) return
+            nearest = (nearest.distance < 50) ? nearest : null
 
-      		if (dragged !== null && dragged.node !== null){
-            var p = particleSystem.fromScreen(s)
-      			dragged.node.p = {x:p.x, y:p.y}
-            // dragged.tempMass = 10000
-      		}
+            if (nearest) {
+                dom.addClass('linkable')
+                window.status = window.location.host + nearest.node.data.url
+            } else {
+                dom.removeClass('linkable')
+            }
 
-          return false
+            if (scrolling) {
+                var nearest = particleSystem.nearest(s);
+                
+                var damp = 0.01
+                nearest.node.p.x += (s.x - old_pos.x)*damp
+                nearest.node.p.y += (s.y - old_pos.y)*damp
+            }
+
+            old_pos = s
+
+            return false
       	});
 
       	$(window).bind('mouseup',function(e){
-          if (dragged===null || dragged.node===undefined) return
-          dragged.node.fixed = false
-          dragged.node.tempMass = 100
-      		dragged = null;
-      		selected = null
-      		return false
-      	});
-      	      
+            scrolling = false
+        });
+
       },
             
     }
   
     return that
   }
-  
- /*
-  Renderer = function(canvas){
-    var canvas = $(canvas).get(0)
-    var ctx = canvas.getContext("2d");
-    var particleSystem = null
-
-    var that = {
-      //
-      // the particle system will call the init function once, right before the
-      // first frame is to be drawn. it's a good place to set up the canvas and
-      // to pass the canvas size to the particle system
-      //
-      init:function(system){
-        // save a reference to the particle system for use in the .redraw() loop
-        particleSystem = system
-
-        // inform the system of the screen dimensions so it can map coords for us.
-        // if the canvas is ever resized, screenSize should be called again with
-        // the new dimensions
-        particleSystem.screenSize(canvas.width, canvas.height) 
-        particleSystem.screenPadding(80) // leave an extra 80px of whitespace per side
-
-        that.initMouseHandling()
-      },
-      
-      // 
-      // redraw will be called repeatedly during the run whenever the node positions
-      // change. the new positions for the nodes can be accessed by looking at the
-      // .p attribute of a given node. however the p.x & p.y values are in the coordinates
-      // of the particle system rather than the screen. you can either map them to
-      // the screen yourself, or use the convenience iterators .eachNode (and .eachEdge)
-      // which allow you to step through the actual node objects but also pass an
-      // x,y point in the screen's coordinate system
-      // 
-
-      redraw:function(){
-        ctx.clearRect(0,0, canvas.width, canvas.height)
-        
-        particleSystem.eachEdge(function(edge, pt1, pt2){
-          // edge: {source:Node, target:Node, length:#, data:{}}
-          // pt1:  {x:#, y:#}  source position in screen coords
-          // pt2:  {x:#, y:#}  target position in screen coords
-
-          // draw a line from pt1 to pt2
-          var style_of_edge = {
-            
-          }
-
-          ctx.strokeStyle = "rgba(255,0,0, .333)"
-          ctx.lineWidth = 1 + 4*edge.data.weight
-          ctx.beginPath()
-          ctx.moveTo(pt1.x, pt1.y)
-          ctx.lineTo(pt2.x, pt2.y)
-          ctx.stroke()
-
-          var th = 8
-          ctx.fillStyle = "black"
-          ctx.font = String(th) + "px Arial"
-          var tmes = ctx.measureText(edge.data.verb)
-          ctx.fillText(edge.data.verb,
-            (pt1.x+pt2.x)/2-tmes.width/2,
-            (pt1.y+pt2.y)/2+th/2);
-        })
-
-        particleSystem.eachNode(function(node, pt){
-          // node: {mass:#, p:{x,y}, name:"", data:{}}
-          // pt:   {x:#, y:#}  node position in screen coords
-
-          // draw a rectangle centered at pt
-          var th = 12
-          ctx.font = String(th) + "px Arial"
-          var style_of_label = {
-                'primary' : 'blue',
-                'success' : 'green',
-                'danger' : 'red',
-                'info' : 'blue',
-                'default' : 'black',
-            };
-
-     function wrapText(context, text, x, y, maxWidth, lineHeight) {
-        var words = text.split(' ');
-        var line = '';
-
-        for(var n = 0; n < words.length; n++) {
-          var testLine = line + words[n] + ' ';
-          var metrics = context.measureText(testLine);
-          var testWidth = metrics.width;
-          if (testWidth > maxWidth && n > 0) {
-            context.fillText(line, x, y);
-            line = words[n] + ' ';
-            y += lineHeight;
-          }
-          else {
-            line = testLine;
-          }
-        }
-        context.fillText(line, x, y);
-      }
-
-          var tmes = ctx.measureText(node.data.label)
-          var tw = tmes.width
-          var w = tw + 20
-          var h = th + 10
-          ctx.fillStyle = style_of_label[node.data.type];
-          ctx.fillRect(pt.x-w/2, pt.y-h/2, w, h)
-          ctx.fillStyle = "white"
-          ctx.fillText(node.data.label, pt.x-tw/2, pt.y+th/2);
-        })    			
-      }
-    }
-    return that
-  };    
-  */
-
+ 
    $(document).ready(function(){
       var sys = arbor.ParticleSystem(100, 1000, 0.5, 55)
       sys.renderer = Renderer("#viewport") // our newly created renderer will have its .init() method called shortly by sys...
 
     {% for atom in atoms %}
 var atom_{{atom.id}} = sys.addNode("{{ atom }}", 
-        { 
+      { url : "{% url 'atom_detail' atom.id %}",
         label : "{{ atom.slug }}",
         type : '{{ atom.typ.bootstrap_label }}' });
     {% endfor %}

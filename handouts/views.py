@@ -6,3 +6,7 @@ from handouts.models import *
 class HandoutDetail(DetailView):
     model = Handout
     context_object_name = 'handout' 
+
+class HandoutList(ListView):
+    model = Handout
+    context_object_name = 'handouts' 
