@@ -6,201 +6,239 @@
 
 {% block extra_style %}
 <style>
-#viewport.linkable{
+#canvas.linkable{
   cursor:pointer;
 }
 </style>
 {% endblock %}
 
 {% block extra_script %}
-<script src="/static/knowledge/arbor.js"></script>
-<script src="/static/knowledge/arbor-graphics.js"></script>
-<script src="/static/knowledge/arbor-tween.js"></script>
+<script src="/static/knowledge/easeljs.min.js"></script>
 <script type="text/javascript">
-(function($){
+   $(document).ready(function(){
+    var graph = {
+    {% for atom in atoms %}
+        {{atom.id}} : {
+            label : "{{ atom.slug }}",
+            type : "{{ atom.typ.bootstrap_label }}",
+            pos : { x: 0, y: 0 },
+            plotted : false,
+            url : "{% url 'atom_detail' atom.id %}",
+            name : "{{ atom }}",
+            incoming: { 
+                {% for rel in atom.from_atoms.all %}
+                    {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
+                {% endfor %}
+                },
+            outgoing: { 
+                {% for rel in atom.to_atoms.all %}
+                    {{ rel.from_atom.id }} : "{{ rel.typ.slug }}",
+                {% endfor %}
+                },
+        },
+    {% endfor %}
+    };
 
-  Renderer = function(canvas){
-    canvas = $(canvas).get(0)
-    var dom = $(canvas)
-    var ctx = canvas.getContext("2d")
-    var particleSystem = null
-    var gfx = arbor.Graphics(canvas)
+    var no_dep = new Array();
 
-    var that = {
-      init:function(system){
-      particleSystem = system
-      particleSystem.screen({size:{width:dom.width(), height:dom.height()},
-                    padding:[36,60,36,60]})
-        //step:.02}) // have the ‘camera’ zoom somewhat slowly as the graph unfolds 
-       //$(window).resize(that.resize)
-       //that.resize()
-      
-       that.initMouseHandling()
-      },
-    
-      redraw:function(){
-        ctx.clearRect(0,0, canvas.width, canvas.height)
+    function has_nonplotted_incoming(atom) {
+        var a = graph[atom];
+        var nonplottedincoming = false;
+
+        for(var oatom in a.incoming) {
+            if (!graph[oatom].plotted) 
+                nonplottedincoming = true;
+        }
+
+        return nonplottedincoming;
+    }
+
+    for (var atom in graph) {
+        if (!has_nonplotted_incoming(atom))
+            no_dep.push(atom);
+    }
+    var ordered = new Array();
+
+    while(no_dep.length > 0) {
+        var atom = no_dep[0];
+        no_dep.shift();
         
-        particleSystem.eachEdge(function(edge, pt1, pt2){
-          // edge: {source:Node, target:Node, length:#, data:{}}
-          // pt1:  {x:#, y:#}  source position in screen coords
-          // pt2:  {x:#, y:#}  target position in screen coords
+        if (graph[atom].plotted)
+            continue;
 
-          // draw a line from pt1 to pt2
-          var style_of_edge = {
-            
-          }
+        ordered.push(atom);
 
-          ctx.strokeStyle = "rgba(255,0,0, .333)"
-          ctx.lineWidth = 1 + 4*edge.data.weight
-          ctx.beginPath()
-          ctx.moveTo(pt1.x, pt1.y)
-          ctx.lineTo(pt2.x, pt2.y)
-          ctx.stroke()
-
-          var th = 8
-          ctx.fillStyle = "black"
-          ctx.font = String(th) + "px Arial"
-          var tmes = ctx.measureText(edge.data.verb)
-          ctx.fillText(edge.data.verb,
-            (pt1.x+pt2.x)/2-tmes.width/2,
-            (pt1.y+pt2.y)/2+th/2);
-        })
-
-        particleSystem.eachNode(function(node, pt){
-            var style_of_label = {
-                'primary' : 'blue',
-                'success' : 'green',
-                'danger' : 'red',
-                'info' : '#9999FF',
-                'default' : 'black',
-            };
-
-
-            var w = Math.max(20, 20+gfx.textWidth(node.data.label) )
-            gfx.oval(pt.x-w/2, pt.y-w/2, w, w, {fill:style_of_label[node.data.type]})
-            gfx.text(node.data.label, pt.x, pt.y+7, {color:"white", align:"center", font:"Arial", size:12})
-            gfx.text(node.data.label, pt.x, pt.y+7, {color:"white", align:"center", font:"Arial", size:12})
-          /*
-          var th = 12
-          ctx.font = String(th) + "px Arial"
-          var style_of_label = {
-                'primary' : 'blue',
-                'success' : 'green',
-                'danger' : 'red',
-                'info' : 'blue',
-                'default' : 'black',
-            };
-
-          var tmes = ctx.measureText(node.data.label)
-          var tw = tmes.width
-          var w = tw + 20
-          var h = th + 10
-          ctx.fillStyle = style_of_label[node.data.type];
-          ctx.fillRect(pt.x-w/2, pt.y-h/2, w, h)
-          ctx.fillStyle = "white"
-          ctx.fillText(node.data.label, pt.x-tw/2, pt.y+th/2);
-          */
-        })    			
-      },
-      
-      resize:function(){
-        var w = $(window).width(),
-            h = $(window).height();
-        canvas.width = w; canvas.height = h // resize the canvas element to fill the screen
-        particleSystem.screenSize(w,h) // inform the system so it can map coords for us
-        that.redraw()
-      },
-
-    	initMouseHandling:function(){
-        // no-nonsense drag and drop (thanks springy.js)
-      	selected = null;
-      	nearest = null;
-      	var dragged = null;
-        var oldmass = 1
-        var scrolling = false
-        var old_pos = null
-
-            
-        $(canvas).mousedown(function(e){
-      		var pos = $(this).offset();
-      		var p = {x:e.pageX-pos.left, y:e.pageY-pos.top}
-            var old_pos = p;
-      		selected = particleSystem.nearest(p);
-            selected = (selected.distance < 50) ? selected : null
-
-      		if (selected && selected.node !== null){
-                window.open(window.location.host + selected.node.data.url)
-            } else {
-                scrolling = true
+        graph[atom].plotted = true;
+        for (var oatom in graph[atom].outgoing) {
+            if (!has_nonplotted_incoming(oatom)) {
+                no_dep.push(oatom);
             }
+        }
+    }
 
-      		return false
-      	});
+    var xfree = new Array();
 
-      	$(canvas).mousemove(function(e){
-            var old_nearest = nearest && nearest.node._id
-      		var pos = $(this).offset();
-      		var s = {x:e.pageX-pos.left, y:e.pageY-pos.top};
+    for (var i = 0; i < ordered.length; i++) {
+        var atom = ordered[i];
+        var maxx = -1;
+        
+        for (var oatom in graph[atom].incoming) {
+            if (graph[oatom].pos.x > maxx)
+                maxx = graph[oatom].pos.x;
+        }
 
-      		nearest = particleSystem.nearest(s);
-            nearest = (nearest.distance < 50) ? nearest : null
+        var current_x = maxx + 1;
 
-            if (nearest) {
-                dom.addClass('linkable')
-                window.status = window.location.host + nearest.node.data.url
-            } else {
-                dom.removeClass('linkable')
-            }
+        if (current_x == xfree.length)
+        {
+            xfree.push(0);
+        }
 
-            if (scrolling) {
-                var nearest = particleSystem.nearest(s);
-                
-                var damp = 0.01
-                nearest.node.p.x += (s.x - old_pos.x)*damp
-                nearest.node.p.y += (s.y - old_pos.y)*damp
-            }
+        var current_y = xfree[current_x];
 
-            old_pos = s
+        graph[atom].pos.x = current_x;
+        graph[atom].pos.y = current_y;
 
-            return false
-      	});
+        xfree[current_x]++;
+    }
 
-      	$(window).bind('mouseup',function(e){
-            scrolling = false
+    var stage = new createjs.Stage("canvas");
+
+    stage.enableMouseOver(10);
+
+    var WIDTH = 100;
+    var SEP = 100;
+    var MARGIN = 50;
+    var INNER_MARGIN = 5;
+
+    var colors = {
+        default: "#e8e8e8",
+        success: "#d0e9c6",
+        primary: "#2e6da4",
+        info: "#c4e3f3",
+        warning: "#faf2cc",
+        danger: "#ebcccc",
+    };
+
+    for (var atom in graph) {
+        var x = graph[atom].pos.x;
+        var y = graph[atom].pos.y;
+
+        var container = new createjs.Container();
+        container.x = MARGIN + (WIDTH+SEP)*x + SEP/2;
+        container.y = MARGIN + (WIDTH+SEP)*y + SEP/2;
+        container.setBounds(0, 0, WIDTH, WIDTH);
+
+        container.on("click", function(e) {
+            window.open(graph[atom].url);
+        });
+        container.on("mouseover", function(e) {
+                $(canvas).addClass('linkable');
+        });
+        container.on("mouseout", function(e) {
+                $(canvas).removeClass('linkable');
         });
 
-      },
-            
+        var rect = new createjs.Shape();
+        var color = colors[graph[atom].type];
+
+        rect.graphics.beginFill(color)
+            .drawRoundRectComplex(0, 0, WIDTH, WIDTH, 5, 5, 5, 5);
+        container.addChild(rect);
+
+        var text = new createjs.Text();
+        text.lineWidth = WIDTH - 2*INNER_MARGIN;
+        text.set({
+            text: graph[atom].name,
+            font: "12px arial",
+            color: "black", 
+        });
+        var b = text.getBounds();
+        text.x = INNER_MARGIN;
+        text.y = WIDTH/2 - b.height/2;
+        
+        container.addChild(text);
+        stage.addChild(container);
+
+        for (var oatom in graph[atom].outgoing) {
+            var edge = new createjs.Shape();
+
+            var ox = graph[oatom].pos.x;
+            var oy = graph[oatom].pos.y;
+
+            var rx = MARGIN + (WIDTH+SEP)*x + SEP/2 + WIDTH;
+            var ry = MARGIN + (WIDTH+SEP)*y + SEP/2 + WIDTH/2;
+            var rox = MARGIN + (WIDTH+SEP)*ox + SEP/2;
+            var roy = MARGIN + (WIDTH+SEP)*oy + SEP/2 + WIDTH/2;
+
+            edge.graphics
+                .beginStroke(createjs.Graphics.getRGB(0, 0, 0))
+                .moveTo(rx, ry).lineTo(rox, roy);
+
+            var radian = Math.atan2( (roy-ry), (rox-rx) );
+            var degree = radian / Math.PI * 180;
+
+            var arrow = new createjs.Shape();
+            arrow.graphics
+                .beginFill(createjs.Graphics.getRGB(0, 0, 0))
+                .moveTo(-5, 5).lineTo(0,0).lineTo(-5,-5);
+            arrow.x = rox;
+            arrow.y = roy;
+            arrow.rotation = degree;
+
+            var text = new createjs.Text(graph[atom].outgoing[oatom],
+                    "10px arial", "red");
+            var b = text.getBounds();
+            text.x = (rx+rox)/2 - b.width/2;
+            text.y = (ry+roy)/2;
+
+            text.rotation = degree;
+
+            stage.addChild(text);
+            stage.addChild(arrow);
+            stage.addChild(edge);
+        }
     }
-  
-    return that
-  }
- 
-   $(document).ready(function(){
-      var sys = arbor.ParticleSystem(100, 1000, 0.5, 55)
-      sys.renderer = Renderer("#viewport") // our newly created renderer will have its .init() method called shortly by sys...
 
-    {% for atom in atoms %}
-var atom_{{atom.id}} = sys.addNode("{{ atom }}", 
-      { url : "{% url 'atom_detail' atom.id %}",
-        label : "{{ atom.slug }}",
-        type : '{{ atom.typ.bootstrap_label }}' });
-    {% endfor %}
+    stage.update();
 
-    {% for atom in atoms %}
-        {% for rel in atom.from_atoms.all %}
-            sys.addEdge(atom_{{ atom.id }}, atom_{{ rel.to_atom.id }},
-                { verb : "{{ rel.typ.slug }}" })
-        {% endfor %}
-    {% endfor %}
-      
-    });
+    canvas.addEventListener("mousewheel", MouseWheelHandler, false);
+    canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
 
-})(this.jQuery);
+    var zoom;
+
+    function MouseWheelHandler(e) {
+        if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0)
+            zoom=1.01;
+        else
+            zoom=1/1.01;
+            var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
+        stage.regX=local.x;
+        stage.regY=local.y;
+        stage.x=stage.mouseX;
+        stage.y=stage.mouseY;	
+        stage.scaleX=stage.scaleY*=zoom;
+
+        stage.update();
+    }
+
+    stage.addEventListener("stagemousedown", function(e) {
+        var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
+        stage.addEventListener("stagemousemove",function(ev) {
+            stage.x = ev.stageX+offset.x;
+            stage.y = ev.stageY+offset.y;
+            stage.update();
+        });
+        stage.addEventListener("stagemouseup", function(){
+            stage.removeAllEventListeners("stagemousemove");
+        });
+    }); 
+
+});
 </script>
 {% endblock %}
 
 {% block body %}
-<canvas id="viewport" width="800" height="600"></canvas>
+<!--<canvas id="viewport" width="800" height="600"></canvas>-->
+<canvas id="canvas" width="800" height="600"></canvas>
 {% endblock %}
