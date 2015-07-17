@@ -2,6 +2,7 @@ from django.db import models
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
+from knowledge.db import SlugOrNullField
 
 
 class ContentRevision(models.Model):
@@ -37,7 +38,7 @@ class AtomManager(models.Manager):
 
 class Atom(models.Model):
     name = models.CharField(max_length=200, blank=True)
-    slug = models.SlugField(max_length=60,unique=True,blank=True)
+    slug = SlugOrNullField(max_length=60,unique=True,blank=True,null=True)
     typ = models.ForeignKey(AtomType)
     text = models.TextField()
     relationships = models.ManyToManyField('self',
@@ -51,11 +52,11 @@ class Atom(models.Model):
         ref = ''
         if self.name != '':
             ref = str(self.name)
-        elif self.slug != '':
+        elif self.slug != None:
             ref = str(self.slug)
         else:
             ref = str(self.id)
-        return u'%s - %s' % (str(self.typ), ref)
+        return u'%s %s' % (str(self.typ), ref)
 
     def get_absolute_url(self):
         return reverse('atom_detail', kwargs={'pk' : self.id})
