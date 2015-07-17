@@ -2,12 +2,15 @@
 {% load atom %}
 {% load comments %}
 
+{% comment %}
 {% block jquery_src %}http://code.jquery.com/jquery-1.11.1.min.js{% endblock %}
+{% endcomment %}
 
 {% block extra_style %}
 <style>
 #canvas {
     width:100%;
+    height:100%;
 }
 #canvas.linkable{
   cursor:pointer;
@@ -18,7 +21,47 @@
 {% block extra_script %}
 <script src="/static/knowledge/easeljs.min.js"></script>
 <script type="text/javascript">
+
+function LightenDarkenColor(col, amt) {
+  
+    var usePound = false;
+  
+    if (col[0] == "#") {
+        col = col.slice(1);
+        usePound = true;
+    }
+ 
+    var num = parseInt(col,16);
+ 
+    var r = (num >> 16) + amt;
+ 
+    if (r > 255) r = 255;
+    else if  (r < 0) r = 0;
+ 
+    var b = ((num >> 8) & 0x00FF) + amt;
+ 
+    if (b > 255) b = 255;
+    else if  (b < 0) b = 0;
+ 
+    var g = (num & 0x0000FF) + amt;
+ 
+    if (g > 255) g = 255;
+    else if (g < 0) g = 0;
+ 
+    return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+  
+}
+
    $(document).ready(function(){
+
+    var canvas = $('#canvas')[0];
+    var ctx = canvas.getContext('2d');
+
+    function initCanvasArea(cnv) {
+        cnv.width = window.innerWidth;
+        cnv.height = window.innerHeight;
+    }
+
     var graph = {
     {% for atom in atoms %}
         {{atom.id}} : {
@@ -107,6 +150,11 @@
 
     var stage = new createjs.Stage("canvas");
 
+    window.onresize = function(e) {
+        initCanvasArea(canvas);
+        stage.update();
+    };
+
     stage.enableMouseOver(10);
 
     var WIDTH = 100;
@@ -115,12 +163,12 @@
     var INNER_MARGIN = 5;
 
     var colors = {
-        default: "#e8e8e8",
-        success: "#d0e9c6",
-        primary: "#2e6da4",
-        info: "#c4e3f3",
-        warning: "#faf2cc",
-        danger: "#ebcccc",
+        default: "#858585",
+        success: "#5cb85c",
+        primary: "#337ab7",
+        info: "#5bc0de",
+        warning: "#f0ad4e",
+        danger: "#d9534f",
     };
 
     for (var atom in graph) {
@@ -132,34 +180,45 @@
         container.y = MARGIN + (WIDTH+SEP)*y + SEP/2;
         container.setBounds(0, 0, WIDTH, WIDTH);
 
-        container.on("click", function(e) {
-            window.open(graph[atom].url);
-        });
-        container.on("mouseover", function(e) {
-                $(canvas).addClass('linkable');
-        });
+        var url = graph[atom].url;
+
+        container.on("click", function(e, url) {
+            window.open(url);
+        }, null, false, url);
+        container.on("mouseover", function(e, url) {
+            $(canvas).addClass('linkable');
+            window.status = url;
+        }, null, false, url);
         container.on("mouseout", function(e) {
-                $(canvas).removeClass('linkable');
-        });
+            $(canvas).removeClass('linkable');
+            window.status = "";
+        }, null, false, url);
 
         var rect = new createjs.Shape();
         var color = colors[graph[atom].type];
 
-        rect.graphics.beginFill(color)
-            .drawRoundRectComplex(0, 0, WIDTH, WIDTH, 5, 5, 5, 5);
-        container.addChild(rect);
-
-        var text = new createjs.Text();
+                var text = new createjs.Text();
         text.lineWidth = WIDTH - 2*INNER_MARGIN;
         text.set({
             text: graph[atom].name,
-            font: "12px arial",
-            color: "black", 
+            font: "bold 12px arial",
+            color: "white", 
+            textAlign: "center",
         });
         var b = text.getBounds();
-        text.x = INNER_MARGIN;
+        text.x = WIDTH/2;
         text.y = WIDTH/2 - b.height/2;
-        
+
+        rect.graphics
+            .beginStroke(LightenDarkenColor(color,-20))
+            .setStrokeStyle(3)
+            .beginFill(color)
+            .drawRoundRectComplex(0, text.y - INNER_MARGIN, WIDTH, b.height +
+                    2*INNER_MARGIN, 5, 5, 5, 5);
+
+        container.addChild(rect);
+
+
         container.addChild(text);
         stage.addChild(container);
 
@@ -184,9 +243,9 @@
             var arrow = new createjs.Shape();
             arrow.graphics
                 .beginFill(createjs.Graphics.getRGB(0, 0, 0))
-                .moveTo(-5, 5).lineTo(0,0).lineTo(-5,-5);
-            arrow.x = rox;
-            arrow.y = roy;
+                .moveTo(5, 5).lineTo(0,0).lineTo(5,-5);
+            arrow.x = rx;
+            arrow.y = ry;
             arrow.rotation = degree;
 
             var text = new createjs.Text(graph[atom].outgoing[oatom],
@@ -203,6 +262,7 @@
         }
     }
 
+    initCanvasArea(canvas);
     stage.update();
 
     canvas.addEventListener("mousewheel", MouseWheelHandler, false);
@@ -241,7 +301,9 @@
 </script>
 {% endblock %}
 
-{% block body %}
+{% block body_base %}
 <!--<canvas id="viewport" width="800" height="600"></canvas>-->
-<canvas id="canvas" width="800" height="600"></canvas>
+<div class="container-fluid">
+    <canvas id="canvas" width="1000" height="600"></canvas>
+</div>
 {% endblock %}
