@@ -39,3 +39,22 @@ def convert_references(value):
     converted += value[i0:]
     return converted
 
+def replace_references(value, old_ref, new_ref):
+    i0 = 0
+    converted = ''
+    for match in re.finditer(reference_re, value):
+        i, j = match.span()
+        converted += value[i0:i]
+        desc = match.group('desc')
+        verb = match.group('verb')
+        ref = match.group('ref')
+
+        if ref == old_ref:
+            ref = new_ref
+
+        converted += '"%s":%s:%s' % (desc, verb, ref)
+
+        i0 = j
+    converted += value[i0:]
+    return converted
+

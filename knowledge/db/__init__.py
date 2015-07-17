@@ -24,7 +24,8 @@ class SlugOrNullField(SlugField):
     '''
 
     def get_prep_value(self, value):
-        value=value.strip()
+        if value is not None:
+            value=value.strip()
         if not value:
             return None
         return value

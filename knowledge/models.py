@@ -62,6 +62,11 @@ class Atom(models.Model):
         return reverse('atom_detail', kwargs={'pk' : self.id})
 
     def save(self, *args, **kwargs):
+        old_slug = None
+        if self.pk is not None:
+            old_self = Atom.objects.get(pk=self.pk)
+            old_slug = old_self.slug
+
         super(Atom, self).save(*args, **kwargs)
         # reify any orphan relationship
         for orphan_rel in AtomOrphanRelationship.objects.filter(ref=self.slug):
@@ -70,8 +75,27 @@ class Atom(models.Model):
             reify_rel.save()
             orphan_rel.delete()
 
+        from knowledge.format import extract_references, replace_references
+        # fix references when slug is changed
+        if self.slug != old_slug:
+            if old_slug is None or old_slug == '':
+                old_ref = str(self.pk)
+            else:
+                old_ref = old_slug
+
+            if self.slug is None or self.slug == '':
+                new_ref = str(self.pk)
+            else:
+                new_ref = self.slug
+
+            rels = AtomRelationship.objects.filter(to_atom=self)
+
+            for rel in rels: 
+                atom = rel.from_atom
+                atom.text = replace_references(atom.text, old_ref, new_ref)
+                atom.save()
+
         # extract references and test for relationships
-        from knowledge.format import extract_references
         uptodate_rel = []
         for verb, ref in extract_references(self.text):
             try:
