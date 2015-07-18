@@ -300,9 +300,22 @@ function LightenDarkenColor(col, amt) {
             var rox = MARGIN + (WIDTH+SEP)*ox + SEP/2;
             var roy = MARGIN + (WIDTH+SEP)*oy + SEP/2 + WIDTH/2;
 
-            edge.graphics
-                .beginStroke(createjs.Graphics.getRGB(0, 0, 0))
-                .moveTo(rx, ry).lineTo(rox, roy);
+            var text_y = (ry+roy)/2;
+
+            if (y == oy && ox != x + 1) {
+                edge.graphics
+                    .beginStroke("black")
+                    .moveTo(rx, ry)
+                    .lineTo(rx+SEP/4,ry)
+                    .lineTo(rx+SEP/4,ry-WIDTH/2-SEP/4)
+                    .lineTo(rox-SEP/4,ry-WIDTH/2-SEP/4)
+                    .lineTo(rox-SEP/4,roy);
+                text_y = ry-WIDTH/2-SEP/4;
+            } else {
+                edge.graphics
+                    .beginStroke("black")
+                    .moveTo(rx, ry).lineTo(rox, roy);
+            }
 
             var radian = Math.atan2( (roy-ry), (rox-rx) );
             var degree = radian / Math.PI * 180;
@@ -315,11 +328,12 @@ function LightenDarkenColor(col, amt) {
             arrow.y = ry;
             arrow.rotation = degree;
 
-            var text = new createjs.Text(graph[atom].outgoing[oatom],
+            var text = new createjs.Text(
+                    graph[atom].outgoing[oatom],
                     "10px arial", "red");
             var b = text.getBounds();
             text.x = (rx+rox)/2 - b.width/2;
-            text.y = (ry+roy)/2;
+            text.y = text_y;
 
             text.rotation = degree;
 
