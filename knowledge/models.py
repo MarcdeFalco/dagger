@@ -70,9 +70,15 @@ class Atom(models.Model):
         super(Atom, self).save(*args, **kwargs)
         # reify any orphan relationship
         for orphan_rel in AtomOrphanRelationship.objects.filter(ref=self.slug):
-            reify_rel = AtomRelationship.objects.create(from_atom=orphan_rel.atom,
+            # in case it already exists (is it even possible?)
+            try:
+                existing_rel = AtomRelationship.objects.get(from_atom=orphan_rel.atom,
+                        to_atom=self, typ=orphan_rel.typ)
+            except ObjectDoesNotExist:
+                reify_rel = AtomRelationship.objects.create(from_atom=orphan_rel.atom,
                     to_atom=self, typ=orphan_rel.typ)
-            reify_rel.save()
+                reify_rel.save()
+
             orphan_rel.delete()
 
         from knowledge.format import extract_references, replace_references

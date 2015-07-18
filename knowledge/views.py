@@ -156,7 +156,7 @@ class AtomBulkImport(FormView):
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
         form.create_atoms()
-        return super(AtomBulkView, self).form_valid(form)
+        return super(AtomBulkImport, self).form_valid(form)
 
 class AtomBulkExport(ListView):
     template_name = 'knowledge/atom_bulk_export.html'
