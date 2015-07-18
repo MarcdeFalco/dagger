@@ -177,6 +177,8 @@ function LightenDarkenColor(col, amt) {
 
     var old_component = 0;
 
+    var base_x = 0;
+
     for (var i = 0; i < ordered.length; i++) {
         var atom = ordered[i];
         var maxx = -1;
@@ -193,6 +195,8 @@ function LightenDarkenColor(col, amt) {
             for (var j in xfree) {
                 xfree[j] = max_y;
             }
+
+            base_x = max_y;
         }
         
         for (var oatom in graph[atom].incoming) {
@@ -204,7 +208,7 @@ function LightenDarkenColor(col, amt) {
 
         if (current_x == xfree.length)
         {
-            xfree.push(0);
+            xfree.push(base_x);
         }
 
         var current_y = xfree[current_x];
