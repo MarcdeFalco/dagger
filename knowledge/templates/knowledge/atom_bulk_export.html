@@ -1,0 +1,14 @@
+{% extends 'site_base.html' %}
+{% load atom %}
+
+{% block body %}
+<pre>
+{% for atom in atoms %}
+$Atom {{ atom.typ.slug }}
+{% if atom.name %}$Name {{ atom.name }}{% endif %}
+{% if atom.slug %}$Slug {{ atom.slug }}{% endif %}
+$Ref {{ atom.id }}
+{{ atom.text }}
+{% endfor %}
+</pre>
+{% endblock %}

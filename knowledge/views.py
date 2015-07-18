@@ -37,6 +37,8 @@ class AtomBulkForm(forms.Form):
 
         for line in lines:
             if line == '':
+                if current_atom is not None and current_atom['text'] != '':
+                    current_atom['text'] += '\r\n'
                 continue
             if line[0] == '$':
                 tokens = line[1:].split()
@@ -66,6 +68,10 @@ class AtomBulkForm(forms.Form):
                 current_atom['ref'] = str(len(atoms)+1)
             atoms.append(current_atom)
 
+        internal_refs = []
+        for atom in atoms:
+            internal_refs.append( atom['ref'] )
+
         slug_re = re.compile(r'^[\w_]+$')
 
         from knowledge.format import extract_references
@@ -81,11 +87,11 @@ class AtomBulkForm(forms.Form):
             if aref not in edges_incoming:
                 edges_incoming[aref] = []
             for _, ref in atom['refs']:
-                if ref[0] == '$':
-                    if ref[1:] not in edges_incoming:
-                        edges_incoming[ref[1:]] = []
-                    edges_incoming[ref[1:]].append(aref)
-                    edges_outgoing[aref].append(ref[1:])
+                if ref in internal_refs:
+                    if ref not in edges_incoming:
+                        edges_incoming[ref] = []
+                    edges_incoming[ref].append(aref)
+                    edges_outgoing[aref].append(ref)
                     
         s = []
         for atom in atoms:
@@ -141,8 +147,8 @@ class AtomBulkForm(forms.Form):
             ra.save()
             atom['id'] = ra.id
 
-class AtomBulkView(FormView):
-    template_name = 'knowledge/atom_bulk.html'
+class AtomBulkImport(FormView):
+    template_name = 'knowledge/atom_bulk_import.html'
     form_class = AtomBulkForm
     success_url = '/k/'
 
@@ -152,3 +158,7 @@ class AtomBulkView(FormView):
         form.create_atoms()
         return super(AtomBulkView, self).form_valid(form)
 
+class AtomBulkExport(ListView):
+    template_name = 'knowledge/atom_bulk_export.html'
+    model = Atom
+    context_object_name = 'atoms' 
