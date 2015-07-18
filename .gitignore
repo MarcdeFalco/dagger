@@ -57,5 +57,11 @@ docs/_build/
 target/
 
 # Django
+db.sqlite3
 static/
+media/
 dagger/settings.py
+
+#Vim
+*.*~
+*.*.swp
