@@ -3,7 +3,7 @@ import re
 # A reference to an atom
 # "le théorème plop":applique:245 by id
 # "link desc":verb:ref
-reference_re_s = r'''"(?P<desc>[^"]*)":(?P<verb>\w+):(?P<ref>[_\w]+)'''
+reference_re_s = r'''"(?P<desc>[^"]*)":(?P<verb>\w+):(?P<ref>[$_\w]+)'''
 reference_re = re.compile(reference_re_s)
 
 def extract_references(value):
@@ -57,4 +57,3 @@ def replace_references(value, old_ref, new_ref):
         i0 = j
     converted += value[i0:]
     return converted
-
