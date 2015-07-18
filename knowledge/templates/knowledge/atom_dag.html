@@ -96,7 +96,7 @@ function LightenDarkenColor(col, amt) {
         }
 
         return nonplottedincoming;
-    }
+    i}
 
     for (var atom in graph) {
         if (!has_nonplotted_incoming(atom))
@@ -116,16 +116,85 @@ function LightenDarkenColor(col, amt) {
         graph[atom].plotted = true;
         for (var oatom in graph[atom].outgoing) {
             if (!has_nonplotted_incoming(oatom)) {
-                no_dep.push(oatom);
+                no_dep.unshift(oatom);
             }
         }
     }
 
+    var visited = {};
+    var ugraph = {};
+    for (var atom in graph) {
+        visited[atom] = false;
+        ugraph[atom] = new Array();
+        for (var iatom in graph[atom].incoming) {
+            ugraph[atom].push( iatom );
+        }
+        for (var oatom in graph[atom].outgoing) {
+            ugraph[atom].push( oatom );
+        }
+    }
+
+    function getNextUnvisited() {
+        for (var atom in graph) {
+            if (!visited[atom])
+                return atom;
+        }
+
+        return null;
+    }
+    
+    var component_index = 0;
+
+    while (true) {
+        var x = getNextUnvisited();
+        if (x == null)
+            break;
+        var tovisit = new Array();
+        tovisit.push(x);
+
+        while (tovisit.length > 0) {
+            x = tovisit[tovisit.length - 1];
+            tovisit.pop();
+
+            if (visited[x]) 
+                continue;
+
+            visited[x] = true;
+            if (graph[x] == null) alert(x);
+            graph[x]['component'] = component_index;  
+
+            for (var i in ugraph[x]) {
+                var oatom = ugraph[x][i];
+                if (!visited[oatom]) {
+                    tovisit.push(oatom);
+                }
+            }
+        }
+
+        component_index++;
+    }
+
     var xfree = new Array();
+
+    var old_component = 0;
 
     for (var i = 0; i < ordered.length; i++) {
         var atom = ordered[i];
         var maxx = -1;
+
+        if (graph[atom].component != old_component) {
+            old_component = graph[atom].component;
+
+            var max_y = 0;
+            for (var j in xfree) {
+                if (xfree[j] > max_y)
+                    max_y = xfree[j];
+            }
+
+            for (var j in xfree) {
+                xfree[j] = max_y;
+            }
+        }
         
         for (var oatom in graph[atom].incoming) {
             if (graph[oatom].pos.x > maxx)
