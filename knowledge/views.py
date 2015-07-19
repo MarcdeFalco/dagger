@@ -22,10 +22,11 @@ class AtomBulkForm(forms.Form):
     def clean_source(self):
         source = self.cleaned_data['source']
         # Atom bulk format
-        # $Atom <atom type slug> 
-        # $Ref [internal ref]
-        # $Slug <slug>
-        # $Name <name>
+        # (% is choosen as lead symbol as it's tex comment symbol)
+        # %Atom <atom type slug> 
+        # %Ref [internal ref]
+        # %Slug <slug>
+        # %Name <name>
         # ... text ...
 
         lines = source.replace('\r','').split('\n')
@@ -40,7 +41,7 @@ class AtomBulkForm(forms.Form):
                 if current_atom is not None and current_atom['text'] != '':
                     current_atom['text'] += '\r\n'
                 continue
-            if line[0] == '$':
+            if line[0] == '%':
                 tokens = line[1:].split()
                 command = tokens[0]
                 arg = line[1+len(command):].strip()
