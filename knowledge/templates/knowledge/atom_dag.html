@@ -65,7 +65,7 @@ function LightenDarkenColor(col, amt) {
         {{atom.id}} : {
             label : "{{ atom.slug }}",
             type : "{{ atom.typ.bootstrap_label }}",
-            pos : { x: 0, y: 0 },
+            pos : { x: 1, y: 0 },
             plotted : false,
             url : "{% url 'atom_detail' atom.id %}",
             name : "{{ atom }}",
@@ -177,14 +177,16 @@ function LightenDarkenColor(col, amt) {
 
     var old_component = 0;
 
-    var base_x = 0;
+    var base_x = -1;
 
-    for (var i = 0; i < ordered.length; i++) {
-        var atom = ordered[i];
+    for (var i = 0; i < ordered.length+1; i++) {
         var maxx = -1;
 
-        if (graph[atom].component != old_component) {
-            old_component = graph[atom].component;
+        if (i == ordered.length || graph[ordered[i]].component != old_component) {
+            var component = old_component; 
+
+            if (i < ordered.length)
+                old_component = graph[atom].component;
 
             var max_y = 0;
             for (var j in xfree) {
@@ -196,9 +198,43 @@ function LightenDarkenColor(col, amt) {
                 xfree[j] = max_y;
             }
 
+            /* expand previous component */
+            var min_y = base_x;
+
+            for (var j = 0; j < xfree.length; j++) {
+                var level = new Array();
+
+                for (var k = 0; k < ordered.length; k++) {
+                    var oatom = ordered[k];
+
+                    if (graph[oatom].component == component 
+                            && graph[oatom].pos.x == j) {
+                        level.push(oatom);
+                    }
+                }
+
+                if (level.length == 0)
+                    continue;
+
+                if (level.length == 1) {
+                    graph[level[0]].pos.y = (min_y + max_y - 2)/2.0;
+                    continue;
+                }
+
+                for (var k in level) {
+                    var oatom = level[k];
+
+                    graph[oatom].pos.y = min_y 
+                            + (max_y - 2 - min_y) * k / (level.length-1);
+                }
+            }
+
             base_x = max_y;
+
+            if (i == ordered.length) break;
         }
         
+        var atom = ordered[i];
         for (var oatom in graph[atom].incoming) {
             if (graph[oatom].pos.x > maxx)
                 maxx = graph[oatom].pos.x;
@@ -229,7 +265,8 @@ function LightenDarkenColor(col, amt) {
     stage.enableMouseOver(10);
 
     var WIDTH = 100;
-    var SEP = 100;
+    var XSEP = 50;
+    var YSEP = 5;
     var MARGIN = 50;
     var INNER_MARGIN = 5;
 
@@ -247,8 +284,8 @@ function LightenDarkenColor(col, amt) {
         var y = graph[atom].pos.y;
 
         var container = new createjs.Container();
-        container.x = MARGIN + (WIDTH+SEP)*x + SEP/2;
-        container.y = MARGIN + (WIDTH+SEP)*y + SEP/2;
+        container.x = MARGIN + (WIDTH+XSEP)*x + XSEP/2;
+        container.y = MARGIN + (WIDTH+YSEP)*y + YSEP/2;
         container.setBounds(0, 0, WIDTH, WIDTH);
 
         var url = graph[atom].url;
@@ -292,17 +329,21 @@ function LightenDarkenColor(col, amt) {
 
         container.addChild(text);
         stage.addChild(container);
+    }
 
+    for (var atom in graph) {
+        var x = graph[atom].pos.x;
+        var y = graph[atom].pos.y;
         for (var oatom in graph[atom].outgoing) {
             var edge = new createjs.Shape();
 
             var ox = graph[oatom].pos.x;
             var oy = graph[oatom].pos.y;
 
-            var rx = MARGIN + (WIDTH+SEP)*x + SEP/2 + WIDTH;
-            var ry = MARGIN + (WIDTH+SEP)*y + SEP/2 + WIDTH/2;
-            var rox = MARGIN + (WIDTH+SEP)*ox + SEP/2;
-            var roy = MARGIN + (WIDTH+SEP)*oy + SEP/2 + WIDTH/2;
+            var rx = MARGIN + (WIDTH+XSEP)*x + XSEP/2 + WIDTH;
+            var ry = MARGIN + (WIDTH+YSEP)*y + YSEP/2 + WIDTH/2;
+            var rox = MARGIN + (WIDTH+XSEP)*ox + XSEP/2;
+            var roy = MARGIN + (WIDTH+YSEP)*oy + YSEP/2 + WIDTH/2;
 
             var text_y = (ry+roy)/2;
 
@@ -310,11 +351,11 @@ function LightenDarkenColor(col, amt) {
                 edge.graphics
                     .beginStroke("black")
                     .moveTo(rx, ry)
-                    .lineTo(rx+SEP/4,ry)
-                    .lineTo(rx+SEP/4,ry-WIDTH/2-SEP/4)
-                    .lineTo(rox-SEP/4,ry-WIDTH/2-SEP/4)
-                    .lineTo(rox-SEP/4,roy);
-                text_y = ry-WIDTH/2-SEP/4;
+                    .lineTo(rx+XSEP/4,ry)
+                    .lineTo(rx+XSEP/4,ry-WIDTH/2-YSEP/4)
+                    .lineTo(rox-XSEP/4,ry-WIDTH/2-YSEP/4)
+                    .lineTo(rox-XSEP/4,roy);
+                text_y = ry-WIDTH/2-YSEP/4;
             } else {
                 edge.graphics
                     .beginStroke("black")
@@ -332,18 +373,37 @@ function LightenDarkenColor(col, amt) {
             arrow.y = ry;
             arrow.rotation = degree;
 
+            var container = new createjs.Container();
+
             var text = new createjs.Text(
                     graph[atom].outgoing[oatom],
-                    "10px arial", "red");
+                    "8px arial", "white");
             var b = text.getBounds();
-            text.x = (rx+rox)/2 - b.width/2;
-            text.y = text_y;
 
-            text.rotation = degree;
+            var margin = 5;
 
-            stage.addChild(text);
+            container.x = (rx+rox)/2 - b.width/2 - margin/2;
+            container.y = text_y - margin/2;
+            container.setBounds(0, 0, b.width+margin, b.height+margin);
+
+            text.x = margin/2;
+            text.y = margin/2;
+
+            var rect = new createjs.Shape();
+            rect.graphics
+                .beginStroke('black')
+                .beginFill('#333333')
+                .setStrokeStyle(1)
+                .drawRoundRectComplex(0, 0, 
+                        b.width+margin, b.height+margin,
+                        1, 1, 1, 1);
+
+            container.addChild(rect);
+            container.addChild(text);
+
             stage.addChild(arrow);
             stage.addChild(edge);
+            stage.addChild(container);
         }
     }
 
