@@ -32,9 +32,18 @@
                 },
                 Macros: {
                   R: '{\\mathbb{R}}',                
+                  N: '{\\mathbb{N}}',                
+                  C: '{\\mathbb{C}}',                
+                  Z: '{\\mathbb{Z}}',                
+                  Q: '{\\mathbb{Q}}',                
                   classeck: ['{\\mathcal{C}^{#1}(#2,\\R)}', 2],
                   bold: ['\\boldsymbol{#1}',1],
                   enscomp: ['{\\{#1 ~ | ~ #2\\}}', 2],
+                  ensfonctions: ['{\\mathcal{F}(#1,#2)}', 2],
+                  plage: ['{[\![#1,#2]\!]}', 2],
+                  range: ['{[\![1,#1]\!]}', 1],
+                  indic: ['{\\mathbbm{#1}}', 1],
+                  application: ['{\\begin{array}{rcccc}#1 & : & #2 & \\mapsto & #3 \\\\ & & #4 & \\mapsto & #5 \\end{array}}', 5],
                 }
             },
             showProcessingMessages: false
