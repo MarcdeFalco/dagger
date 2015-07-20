@@ -173,86 +173,48 @@ function LightenDarkenColor(col, amt) {
         component_index++;
     }
 
-    var xfree = new Array();
+    var min_y = 0;
 
-    var old_component = 0;
+    for (var i = 0; i < component_index; i++) {
+        var buckets = new Array();
 
-    var base_x = -1;
+        for (var j = 0; j < ordered.length; j++) {
+            if (graph[ordered[j]].component != i)
+                continue;
 
-    for (var i = 0; i < ordered.length+1; i++) {
-        var maxx = -1;
-
-        if (i == ordered.length || graph[ordered[i]].component != old_component) {
-            var component = old_component; 
-
-            if (i < ordered.length)
-                old_component = graph[atom].component;
-
-            var max_y = 0;
-            for (var j in xfree) {
-                if (xfree[j] > max_y)
-                    max_y = xfree[j];
+            var previous_x = -1;
+    
+            var atom = ordered[j];
+            for (var oatom in graph[atom].incoming) {
+                if (graph[oatom].pos.x > previous_x)
+                    previous_x = graph[oatom].pos.x;
             }
+            var current_x = previous_x + 1;
+            graph[atom].pos.x = current_x;
 
-            for (var j in xfree) {
-                xfree[j] = max_y;
-            }
+            while (current_x >= buckets.length)
+                buckets.push( new Array() );
 
-            /* expand previous component */
-            var min_y = base_x;
-
-            for (var j = 0; j < xfree.length; j++) {
-                var level = new Array();
-
-                for (var k = 0; k < ordered.length; k++) {
-                    var oatom = ordered[k];
-
-                    if (graph[oatom].component == component 
-                            && graph[oatom].pos.x == j) {
-                        level.push(oatom);
-                    }
-                }
-
-                if (level.length == 0)
-                    continue;
-
-                if (level.length == 1) {
-                    graph[level[0]].pos.y = (min_y + max_y - 2)/2.0;
-                    continue;
-                }
-
-                for (var k in level) {
-                    var oatom = level[k];
-
-                    graph[oatom].pos.y = min_y 
-                            + (max_y - 2 - min_y) * k / (level.length-1);
-                }
-            }
-
-            base_x = max_y;
-
-            if (i == ordered.length) break;
-        }
-        
-        var atom = ordered[i];
-        for (var oatom in graph[atom].incoming) {
-            if (graph[oatom].pos.x > maxx)
-                maxx = graph[oatom].pos.x;
+            buckets[current_x].push( atom );
         }
 
-        var current_x = maxx + 1;
-
-        if (current_x == xfree.length)
-        {
-            xfree.push(base_x);
+        var max_count = 0;
+        for (var x in buckets) {
+            if (buckets[x].length > max_count)
+                max_count = buckets[x].length;
         }
 
-        var current_y = xfree[current_x];
+        var max_y = min_y + max_count;
+        for (var x in buckets) {
+            for (var j = 0; j < buckets[x].length; j++) {
+                var atom = buckets[x][j];
 
-        graph[atom].pos.x = current_x;
-        graph[atom].pos.y = current_y;
+                graph[atom].pos.y = min_y
+                    + (max_y - min_y) * (j+0.5) / (buckets[x].length);
+            }
+        }
 
-        xfree[current_x]++;
+        min_y = max_y + .5;
     }
 
     var stage = new createjs.Stage("canvas");
