@@ -244,58 +244,6 @@ function LightenDarkenColor(col, amt) {
     for (var atom in graph) {
         var x = graph[atom].pos.x;
         var y = graph[atom].pos.y;
-
-        var container = new createjs.Container();
-        container.x = MARGIN + (WIDTH+XSEP)*x + XSEP/2;
-        container.y = MARGIN + (WIDTH+YSEP)*y + YSEP/2;
-        container.setBounds(0, 0, WIDTH, WIDTH);
-
-        var url = graph[atom].url;
-
-        container.on("click", function(e, url) {
-            window.open(url);
-        }, null, false, url);
-        container.on("mouseover", function(e, url) {
-            $(canvas).addClass('linkable');
-            window.status = url;
-        }, null, false, url);
-        container.on("mouseout", function(e) {
-            $(canvas).removeClass('linkable');
-            window.status = "";
-        }, null, false, url);
-
-        var rect = new createjs.Shape();
-        var color = colors[graph[atom].type];
-
-                var text = new createjs.Text();
-        text.lineWidth = WIDTH - 2*INNER_MARGIN;
-        text.set({
-            text: graph[atom].name,
-            font: "bold 12px arial",
-            color: "white", 
-            textAlign: "center",
-        });
-        var b = text.getBounds();
-        text.x = WIDTH/2;
-        text.y = WIDTH/2 - b.height/2;
-
-        rect.graphics
-            .beginStroke(LightenDarkenColor(color,-20))
-            .setStrokeStyle(3)
-            .beginFill(color)
-            .drawRoundRectComplex(0, text.y - INNER_MARGIN, WIDTH, b.height +
-                    2*INNER_MARGIN, 5, 5, 5, 5);
-
-        container.addChild(rect);
-
-
-        container.addChild(text);
-        stage.addChild(container);
-    }
-
-    for (var atom in graph) {
-        var x = graph[atom].pos.x;
-        var y = graph[atom].pos.y;
         for (var oatom in graph[atom].outgoing) {
             var edge = new createjs.Shape();
 
@@ -369,6 +317,59 @@ function LightenDarkenColor(col, amt) {
         }
     }
 
+    for (var atom in graph) {
+        var x = graph[atom].pos.x;
+        var y = graph[atom].pos.y;
+
+        var container = new createjs.Container();
+        container.x = MARGIN + (WIDTH+XSEP)*x + XSEP/2;
+        container.y = MARGIN + (WIDTH+YSEP)*y + YSEP/2;
+        container.setBounds(0, 0, WIDTH, WIDTH);
+
+        var url = graph[atom].url;
+
+        container.on("click", function(e, url) {
+            window.open(url);
+        }, null, false, url);
+        container.on("mouseover", function(e, url) {
+            $(canvas).addClass('linkable');
+            window.status = url;
+        }, null, false, url);
+        container.on("mouseout", function(e) {
+            $(canvas).removeClass('linkable');
+            window.status = "";
+        }, null, false, url);
+
+        var rect = new createjs.Shape();
+        var color = colors[graph[atom].type];
+
+                var text = new createjs.Text();
+        text.lineWidth = WIDTH - 2*INNER_MARGIN;
+        text.set({
+            text: graph[atom].name,
+            font: "bold 12px arial",
+            color: "white", 
+            textAlign: "center",
+        });
+        var b = text.getBounds();
+        text.x = WIDTH/2;
+        text.y = WIDTH/2 - b.height/2;
+
+        rect.graphics
+            .beginStroke(LightenDarkenColor(color,-20))
+            .setStrokeStyle(3)
+            .beginFill(color)
+            .drawRoundRectComplex(0, text.y - INNER_MARGIN, WIDTH, b.height +
+                    2*INNER_MARGIN, 5, 5, 5, 5);
+
+        container.addChild(rect);
+
+
+        container.addChild(text);
+        stage.addChild(container);
+    }
+
+    
     initCanvasArea(canvas);
     stage.update();
 
