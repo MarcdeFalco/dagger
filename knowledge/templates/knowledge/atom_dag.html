@@ -214,7 +214,7 @@ function LightenDarkenColor(col, amt) {
             }
         }
 
-        min_y = max_y + .5;
+        min_y = max_y;
     }
 
     var stage = new createjs.Stage("canvas");
@@ -226,9 +226,9 @@ function LightenDarkenColor(col, amt) {
 
     stage.enableMouseOver(10);
 
-    var WIDTH = 100;
-    var XSEP = 50;
-    var YSEP = 5;
+    var WIDTH = 80;
+    var XSEP = 80;
+    var YSEP = 0;
     var MARGIN = 50;
     var INNER_MARGIN = 5;
 
