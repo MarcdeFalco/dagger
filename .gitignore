@@ -60,7 +60,7 @@ target/
 db.sqlite3
 static/
 media/
-dagger/settings.py
+dagger/private.py
 
 #Vim
 *.*~

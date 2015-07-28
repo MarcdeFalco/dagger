@@ -1,0 +1,17 @@
+Django==1.8.2
+Pygments==2.0.2
+django-admin-bootstrapped==2.5.4
+django-appconf==1.0.1
+django-bootstrap-form==3.2
+django-contrib-comments==1.6.1
+django-crispy-forms==1.4.0
+django-extensions==1.5.5
+django-fluent-comments==1.0.2
+django-mptt==0.7.4
+django-tag-parser==2.1
+django-user-accounts==1.1
+docutils==0.12
+pinax-theme-bootstrap==5.7.6
+pytz==2015.4
+six==1.9.0
+textile==2.2.2

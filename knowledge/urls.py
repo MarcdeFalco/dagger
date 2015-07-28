@@ -11,5 +11,5 @@ urlpatterns = patterns('knowledge.views',
     url(r'bulk/import/', knowledge.views.AtomBulkImport.as_view(),
         name='atom_bulk_import'),
     url(r'dag', knowledge.views.AtomDAG.as_view(), name='atom_dag'),
-    url(r'', knowledge.views.Home.as_view(), name='home'),
+    url(r'^$', knowledge.views.Home.as_view(), name='home'),
     )
