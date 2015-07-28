@@ -5,6 +5,14 @@
 {% block jquery_src %}http://code.jquery.com/jquery-1.11.1.min.js{% endblock %}
 {% endcomment %}
 
+{% block footer %}
+Pour naviguer dans le graphe utilisez les touches fléchés pour vous déplacer,
+et les touches + et - pour zoomer.
+<br/>
+En survolant un élément son contenu s'affiche. En cliquant dessus,
+on accède à son contenu dans une nouvelle fenêtre.
+{% endblock %}
+
 {% block extra_style %}
 <style>
 #canvas {
@@ -15,9 +23,11 @@
   cursor:pointer;
 }
 </style>
+<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
 {% endblock %}
 
-{% block extra_script %}
+{% block local_script %}
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
 <script src="/static/knowledge/easeljs.min.js"></script>
 <script type="text/javascript">
 
@@ -219,12 +229,14 @@ function LightenDarkenColor(col, amt) {
 
     var stage = new createjs.Stage("canvas");
 
+    var graph_container = new createjs.Container();
+
     window.onresize = function(e) {
         initCanvasArea(canvas);
         stage.update();
     };
 
-    stage.enableMouseOver(10);
+    stage.enableMouseOver();
 
     var WIDTH = 80;
     var XSEP = 80;
@@ -283,41 +295,44 @@ function LightenDarkenColor(col, amt) {
             arrow.y = ry;
             arrow.rotation = degree;
 
-            var container = new createjs.Container();
+            if (graph[atom].outgoing[oatom] != 'necessite') {
+                var container = new createjs.Container();
 
-            var text = new createjs.Text(
-                    graph[atom].outgoing[oatom],
-                    "8px arial", "white");
-            var b = text.getBounds();
+                var text = new createjs.Text(
+                        graph[atom].outgoing[oatom],
+                        "8px arial", "white");
+                var b = text.getBounds();
 
-            var margin = 5;
+                var margin = 5;
 
-            container.x = (rx+rox)/2 - b.width/2 - margin/2;
-            container.y = text_y - margin/2;
-            container.setBounds(0, 0, b.width+margin, b.height+margin);
+                container.x = (rx+rox)/2 - b.width/2 - margin/2;
+                container.y = text_y - margin/2;
+                container.setBounds(0, 0, b.width+margin, b.height+margin);
 
-            text.x = margin/2;
-            text.y = margin/2;
+                text.x = margin/2;
+                text.y = margin/2;
 
-            var rect = new createjs.Shape();
-            rect.graphics
-                .beginStroke('black')
-                .beginFill('#333333')
-                .setStrokeStyle(1)
-                .drawRoundRectComplex(0, 0, 
-                        b.width+margin, b.height+margin,
-                        1, 1, 1, 1);
+                var rect = new createjs.Shape();
+                rect.graphics
+                    .beginStroke('black')
+                    .beginFill('#333333')
+                    .setStrokeStyle(1)
+                    .drawRoundRectComplex(0, 0, 
+                            b.width+margin, b.height+margin,
+                            1, 1, 1, 1);
 
-            container.addChild(rect);
-            container.addChild(text);
+                container.addChild(rect);
+                container.addChild(text);
+            }
 
-            stage.addChild(arrow);
-            stage.addChild(edge);
-            stage.addChild(container);
+            graph_container.addChild(arrow);
+            graph_container.addChild(edge);
+            graph_container.addChild(container);
+
         }
     }
 
-    for (var atom in graph) {
+    $.each(graph, function(atom) {
         var x = graph[atom].pos.x;
         var y = graph[atom].pos.y;
 
@@ -366,52 +381,96 @@ function LightenDarkenColor(col, amt) {
 
 
         container.addChild(text);
-        stage.addChild(container);
-    }
+        graph_container.addChild(container);
+
+        container.addEventListener('rollover', function(e) {
+            $('#canvas').qtip('api').reposition();
+            $('#canvas').qtip('api').show();
+            $('#canvas').qtip('api').set('content.text', 'Chargement...');
+
+            $.get('/detail/' + atom + '/', function(content) {
+                $('#canvas').qtip('api').elements.content.html(
+                    '<div id="mathtooltip">'
+                    + $(content).find('#atom_text').html()
+                    + '</div>');
+                MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
+            });
+        });
+
+        container.addEventListener('rollout', function(e) {
+            $('#canvas').qtip('api').set('content.text', '');
+            $('#canvas').qtip('api').hide();
+        });
+    });
 
     
     initCanvasArea(canvas);
-    stage.update();
 
-    canvas.addEventListener("mousewheel", MouseWheelHandler, false);
-    canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+    stage.addChild(graph_container);
 
-    var zoom;
-
-    function MouseWheelHandler(e) {
-        if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0)
-            zoom=1.01;
-        else
-            zoom=1/1.01;
-            var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
-        stage.regX=local.x;
-        stage.regY=local.y;
-        stage.x=stage.mouseX;
-        stage.y=stage.mouseY;	
-        stage.scaleX=stage.scaleY*=zoom;
-
-        stage.update();
+    var bounds = graph_container.getBounds();
+    if (bounds.width > canvas.width || bounds.height > canvas.height) {
+        var wfactor = canvas.width / bounds.width;
+        var hfactor = canvas.height / bounds.height;
+        var zoom = wfactor;
+        if (hfactor < zoom) zoom = hfactor;
+        zoom *= 0.9;
+        graph_container.scaleX = graph_container.scaleY *= zoom;
     }
 
-    stage.addEventListener("stagemousedown", function(e) {
-        var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
-        stage.addEventListener("stagemousemove",function(ev) {
-            stage.x = ev.stageX+offset.x;
-            stage.y = ev.stageY+offset.y;
-            stage.update();
-        });
-        stage.addEventListener("stagemouseup", function(){
-            stage.removeAllEventListeners("stagemousemove");
-        });
-    }); 
+    stage.update();
 
+    $(window).keydown(function(e){
+        switch (e.which || e.keyCode){
+            case 39: // right arrow key
+                graph_container.x -= 50;
+                stage.update();
+                break;
+            case 37: // left arrow key
+                graph_container.x += 50;
+                stage.update();
+                break;
+            case 40: // up arrow key
+                graph_container.y -= 50;
+                stage.update();
+                break;
+            case 38: // down arrow key
+                graph_container.y += 50;
+                stage.update();
+                break;
+            case 189: // minus
+                var local = graph_container.globalToLocal(stage.mouseX,
+                    stage.mouseY);
+                graph_container.regX=local.x;
+                graph_container.regY=local.y;
+                graph_container.x = stage.mouseX;
+                graph_container.y = stage.mouseY;
+                graph_container.scaleX = graph_container.scaleY *= 1/1.1;
+                stage.update();
+                break;
+            case 187: // plus
+                var local = graph_container.globalToLocal(stage.mouseX,
+                        stage.mouseY);
+                graph_container.regX=local.x;
+                graph_container.regY=local.y;
+                graph_container.x = stage.mouseX;
+                graph_container.y = stage.mouseY;
+                graph_container.scaleX = graph_container.scaleY *= 1.1;
+                stage.update();
+                break;
+        }
+    });
+    
+    $('#canvas').qtip({ 
+        position: { target: 'mouse' },
+        content: { text: 'Chargement...' }});
+    $('#canvas').qtip('api').hide();
 });
 </script>
 {% endblock %}
 
 {% block body_base %}
-<!--<canvas id="viewport" width="800" height="600"></canvas>-->
-<div class="container-fluid">
+<div class="container">
     <canvas id="canvas" width="1000" height="600"></canvas>
 </div>
 {% endblock %}

@@ -1,5 +1,4 @@
 {% extends 'theme_bootstrap/base.html' %}
-{% block site_brand %}{% endblock %}
 {% block nav %}
     <ul class="nav navbar-nav">
         <li><a href="{% url 'atom_dag' %}">Graphe des connaissances</a></li>
@@ -9,6 +8,8 @@
     </ul>
 {% endblock %}
 {% block extra_script %}
+{% block local_script %}
+{% endblock %}
 <script type="text/javascript" src="/static/fluent_comments/js/ajaxcomments.js"></script>
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js">
         MathJax.Hub.Config({
@@ -42,7 +43,7 @@
                   ensfonctions: ['{\\mathcal{F}(#1,#2)}', 2],
                   plage: ['{[[#1,#2]]}', 2],
                   range: ['{[[1,#1]]}', 1],
-                  indic: ['{1|}', 1],
+                  indic: '{\\boldsymbol{1}}',
                   id: '{id}',
                   rR: '{\\mathcal{R}}',
                   application: ['{\\begin{array}{rcccc}#1 & : & #2 & \\mapsto & #3 \\\\ & & #4 & \\mapsto & #5 \\end{array}}', 5],

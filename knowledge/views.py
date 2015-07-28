@@ -11,13 +11,28 @@ class AtomDetail(DetailView):
     model = Atom
     context_object_name = 'atom' 
 
+class AtomDOT(ListView):
+    model = Atom
+    context_object_name = 'atoms' 
+    template_name = 'knowledge/atom_dag.dot'
+
+    #def get(self, request, *args, **kwargs):
+    #    template = loader.get_template(self.template_name)
+    #    response = HttpResponse(
+
 class AtomDAG(ListView):
     model = Atom
     context_object_name = 'atoms' 
     template_name = 'knowledge/atom_dag.html'
 
+    def get_context_object(self, *args, **kwargs):
+        context = super(self, AtomDAG).get_context_object(*args, **kwargs)
+        context['types'] = AtomRelationshipType.objects.all()
+        return context
+
 class AtomBulkForm(forms.Form):
     source = forms.CharField(widget=forms.Textarea)
+    overwrite = forms.BooleanField()
 
     def clean_source(self):
         source = self.cleaned_data['source']
@@ -132,6 +147,11 @@ class AtomBulkForm(forms.Form):
     def create_atoms(self):
         from knowledge.format import replace_references
 
+        overwrite = self.cleaned_data.get('overwrite',False)
+        if overwrite:
+            for atom in Atom.objects.all():
+                atom.delete()
+
         for atom in self.ordered:
             typ = AtomType.objects.get(slug=atom['type'])
 
@@ -163,3 +183,6 @@ class AtomBulkExport(ListView):
     template_name = 'knowledge/atom_bulk_export.html'
     model = Atom
     context_object_name = 'atoms' 
+
+class Home(TemplateView):
+    template_name = 'knowledge/home.html'
