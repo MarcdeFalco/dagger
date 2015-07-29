@@ -285,20 +285,11 @@ function LightenDarkenColor(col, amt) {
 
             var text_y = (ry+roy)/2;
 
-            if (y == oy && ox != x + 1) {
-                edge.graphics
+            edge.graphics
                     .beginStroke("black")
                     .moveTo(rx, ry)
-                    .lineTo(rx+XSEP/4,ry)
-                    .lineTo(rx+XSEP/4,ry-WIDTH/2-YSEP/4)
-                    .lineTo(rox-XSEP/4,ry-WIDTH/2-YSEP/4)
-                    .lineTo(rox-XSEP/4,roy);
-                text_y = ry-WIDTH/2-YSEP/4;
-            } else {
-                edge.graphics
-                    .beginStroke("black")
-                    .moveTo(rx, ry).lineTo(rox, roy);
-            }
+                    .bezierCurveTo(rx+XSEP/2,ry,
+                        rox-XSEP/2,roy, rox, roy);
 
             var radian = Math.atan2( (roy-ry), (rox-rx) );
             var degree = radian / Math.PI * 180;
