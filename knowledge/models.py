@@ -17,6 +17,7 @@ class AtomType(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=30,unique=True)
     bootstrap_label = models.CharField(max_length=30, default='default')
+    important = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

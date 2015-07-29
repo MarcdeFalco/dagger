@@ -30,6 +30,9 @@ class AtomDAG(ListView):
         context['types'] = AtomRelationshipType.objects.all()
         return context
 
+    def get_queryset(self):
+        return Atom.objects.filter(typ__important=True)
+
 class AtomBulkForm(forms.Form):
     source = forms.CharField(widget=forms.Textarea)
     overwrite = forms.BooleanField()
