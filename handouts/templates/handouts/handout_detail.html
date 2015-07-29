@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block body %}
-<h2>{{ handout.lead.name }}</h2>
+<h2>{{ handout.lead.name }} <a href="{% url "handout_dag" pk=handout.pk %}">(DAG)</a></h2>
 {% for node,structure in handout.lead.get_descendants|tree_info %}
     {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
         <h3><strong>{{ node.name }}</strong></h3>

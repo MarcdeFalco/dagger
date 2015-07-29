@@ -25,8 +25,8 @@ class AtomDAG(ListView):
     context_object_name = 'atoms' 
     template_name = 'knowledge/atom_dag.html'
 
-    def get_context_object(self, *args, **kwargs):
-        context = super(self, AtomDAG).get_context_object(*args, **kwargs)
+    def get_context_data(self, *args, **kwargs):
+        context = super(AtomDAG, self).get_context_data(*args, **kwargs)
         context['types'] = AtomRelationshipType.objects.all()
         return context
 
