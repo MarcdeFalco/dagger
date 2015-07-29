@@ -231,12 +231,56 @@ function LightenDarkenColor(col, amt) {
         for (var x in buckets) {
             buckets[x].sort(function(a,b) { return averageIncomingY(a) - averageIncomingY(b); });
 
+            var spread = new Array();
+            for (var j = 0; j < buckets[x].length; j++) {
+                var y = min_y + (max_y - min_y) * (j+0.5) / (buckets[x].length);
+                spread.push(y);
+            }
+
+            function shouldSwap(a1, j1, a2, j2) {
+                var y1 = spread[j1];
+                var y2 = spread[j2];
+
+                var crossings12 = 0;
+                var crossings21 = 0;
+                for (var oa1 in graph[a1].incoming) {
+                    for (var oa2 in graph[a2].incoming) {
+                        var oy1 = graph[oa1].pos.y;
+                        var oy2 = graph[oa2].pos.y;
+    
+                        if (oy1 < oy2)
+                            if (y1 < y2) crossings12++;
+                            else crossings21++;
+                        else
+                            if (y1 >= y2) crossings12++;
+                            else crossings21++;
+                    }
+                }
+
+                return crossings21 < crossings12;
+            }
+
+            // Maximum 5 iterations of swapping
+            for (var kk = 0; kk < 5; kk++) {
+                var swap = 0;
+
+                for (var j = 0; j < buckets[x].length - 1; j++) {
+                    if (!shouldSwap(buckets[x][j], j, buckets[x][j+1], j+1))
+                    {
+                        var z = buckets[x][j];
+                        buckets[x][j] = buckets[x][j+1];
+                        buckets[x][j+1] = z;
+
+                        swap++;
+                    }
+                }
+    
+                if (swap == 0) break;
+            } 
+
             for (var j = 0; j < buckets[x].length; j++) {
                 var atom = buckets[x][j];
-
-                graph[atom].pos.y = min_y
-                    + (max_y - min_y) * (j+0.5) / (buckets[x].length);
-
+                graph[atom].pos.y = spread[j];
             }
         }
 
