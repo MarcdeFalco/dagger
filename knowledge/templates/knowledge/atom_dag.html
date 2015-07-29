@@ -81,12 +81,16 @@ function LightenDarkenColor(col, amt) {
             name : "{{ atom }}",
             incoming: { 
                 {% for rel in atom.from_atoms.all %}
-                    {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
+                    {% if rel.to_atom in atoms %}
+                        {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
+                    {% endif %}
                 {% endfor %}
                 },
             outgoing: { 
                 {% for rel in atom.to_atoms.all %}
-                    {{ rel.from_atom.id }} : "{{ rel.typ.slug }}",
+                    {% if rel.from_atom in atoms %}
+                        {{ rel.from_atom.id }} : "{{ rel.typ.slug }}",
+                    {% endif %}
                 {% endfor %}
                 },
         },
