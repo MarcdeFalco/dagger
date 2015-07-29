@@ -35,7 +35,7 @@ class AtomDAG(ListView):
 
 class AtomBulkForm(forms.Form):
     source = forms.CharField(widget=forms.Textarea)
-    overwrite = forms.BooleanField()
+    overwrite = forms.BooleanField(required=False)
 
     def clean_source(self):
         source = self.cleaned_data['source']
