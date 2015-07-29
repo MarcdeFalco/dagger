@@ -215,12 +215,28 @@ function LightenDarkenColor(col, amt) {
         }
 
         var max_y = min_y + max_count;
+        function averageIncomingY(atom) {
+            var my = 0;
+            var degree = 0;
+            for (var oatom in graph[atom].incoming) {
+                degree++;
+                my += graph[oatom].pos.y;
+            }
+            if (degree > 0)
+                return my / degree;
+            else
+                return 0;
+        }
+
         for (var x in buckets) {
+            buckets[x].sort(function(a,b) { return averageIncomingY(a) - averageIncomingY(b); });
+
             for (var j = 0; j < buckets[x].length; j++) {
                 var atom = buckets[x][j];
 
                 graph[atom].pos.y = min_y
                     + (max_y - min_y) * (j+0.5) / (buckets[x].length);
+
             }
         }
 
