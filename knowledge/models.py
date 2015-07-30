@@ -25,6 +25,7 @@ class AtomType(models.Model):
 class AtomRelationshipType(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=30,unique=True)
+    fuse_into = models.BooleanField(default=False)
 
     def __str__(self):
         return u'%s' % self.name
@@ -128,6 +129,20 @@ class Atom(models.Model):
                 .exclude(id__in=[ rel.id for rel in uptodate_rel ])
         for extra in extra_rel:
             extra.delete()
+
+    def fuse_to_atoms(self):
+        fused_rel = []
+        for rel in self.to_atoms.all():
+            if rel.typ.fuse_into:
+                fused_rel += list(rel.from_atom.to_atoms.all())
+        return fused_rel
+
+    def fuse_from_atoms(self):
+        fused_rel = []
+        for rel in self.from_atoms.all():
+            if rel.typ.fuse_into:
+                fused_rel += list(rel.to_atom.from_atoms.all())
+        return fused_rel
 
 class AtomOrphanRelationship(models.Model):
     ref = models.SlugField(max_length=60)

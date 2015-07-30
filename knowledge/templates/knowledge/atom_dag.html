@@ -85,6 +85,11 @@ function LightenDarkenColor(col, amt) {
                         {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
                     {% endif %}
                 {% endfor %}
+                {% for rel in atom.fuse_from_atoms.all %}
+                    {% if rel.to_atom in atoms %}
+                        {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
+                    {% endif %}
+                {% endfor %}
                 },
             outgoing: { 
                 {% for rel in atom.to_atoms.all %}
@@ -303,7 +308,7 @@ function LightenDarkenColor(col, amt) {
     stage.enableMouseOver();
 
     var WIDTH = 80;
-    var XSEP = 80;
+    var XSEP = 2*WIDTH;
     var YSEP = 0;
     var MARGIN = 50;
     var INNER_MARGIN = 5;
