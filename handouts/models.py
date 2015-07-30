@@ -24,7 +24,9 @@ class Paragraph(MPTTModel):
 
 class ParagraphContainsAtoms(models.Model):
     paragraph = models.ForeignKey(Paragraph)
+    lead_in = models.TextField(blank=True)
     atom = models.ForeignKey(Atom)
+    lead_out = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
@@ -47,6 +49,10 @@ class Handout(models.Model):
         # * Main paragraph
         # ** Sub paragraph
         # - atom_by_ref
+        # text placed just before the atom to introduce it
+        # and can be multiline
+        # -- (optional separation and sign that )
+        # the following lines are to be placed after the atom
         # -> verb atom_by_ref [(all,random,first)]
 
         lines = self.code.replace('\r','').split('\n') 
@@ -58,19 +64,49 @@ class Handout(models.Model):
         lead.save()
         branch = [ (lead, 1) ]
 
+        def get_tag(i):
+            if i >= len(lines):
+                return None
+            line = lines[i]
+            if line == '' or line.strip() == '':
+                return None
+            return line.strip().split()[0]
+
         i = 1
         while i < len(lines):
             line = lines[i]
+            tag = get_tag(i)
             i += 1
             if line == '':
                 continue
-            tag = line.strip().split()[0]
             if tag == '-':
                 ref = line.split()[1]
                 atom = Atom.objects.by_ref(ref)
                 paragraph, _ = branch[-1]
+                lead_in = []
+                lead_out = []
+                leading_out = False
+                while i < len(lines):
+                    t = get_tag(i)
+                    if not t:
+                        i += 1
+                        continue
+                    if t == '--':
+                        leading_out = True
+                        i += 1
+                        continue
+                    if t[0] in ['-', '*']:
+                        break
+                    if leading_out:
+                        lead_out.append( lines[i].strip() )
+                    else:
+                        lead_in.append( lines[i].strip() )
+                    i += 1
+                lead_in = '\r\n'.join(lead_in)
+                lead_out = '\r\n'.join(lead_out)
                 pca = ParagraphContainsAtoms.objects.create(paragraph=paragraph,
-                        atom=atom, order=suborder)
+                        atom=atom, order=suborder,
+                        lead_in=lead_in, lead_out=lead_out)
                 pca.save()
                 suborder += 1
             elif tag == '->':
