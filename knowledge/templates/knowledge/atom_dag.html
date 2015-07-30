@@ -85,9 +85,9 @@ function LightenDarkenColor(col, amt) {
                         {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
                     {% endif %}
                 {% endfor %}
-                {% for rel in atom.fuse_from_atoms.all %}
-                    {% if rel.to_atom in atoms %}
-                        {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
+                {% for oatom,typ in atom.fuse_from_atoms %}
+                    {% if oatom in atoms %}
+                        {{ oatom.id }} : "{{ typ.slug }}",
                     {% endif %}
                 {% endfor %}
                 },
@@ -95,6 +95,11 @@ function LightenDarkenColor(col, amt) {
                 {% for rel in atom.to_atoms.all %}
                     {% if rel.from_atom in atoms %}
                         {{ rel.from_atom.id }} : "{{ rel.typ.slug }}",
+                    {% endif %}
+                {% endfor %}
+                {% for oatom,typ in atom.fuse_to_atoms %}
+                    {% if oatom in atoms %}
+                        {{ oatom.id }} : "{{ typ.slug }}",
                     {% endif %}
                 {% endfor %}
                 },

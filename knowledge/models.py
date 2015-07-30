@@ -130,18 +130,21 @@ class Atom(models.Model):
         for extra in extra_rel:
             extra.delete()
 
-    def fuse_to_atoms(self):
+    def fuse_from_atoms(self):
         fused_rel = []
         for rel in self.to_atoms.all():
             if rel.typ.fuse_into:
-                fused_rel += list(rel.from_atom.to_atoms.all())
+                for orel in rel.from_atom.from_atoms.all():
+                    if orel.to_atom != self:
+                        fused_rel.append( (orel.to_atom, orel.typ) )
         return fused_rel
 
-    def fuse_from_atoms(self):
+    def fuse_to_atoms(self):
         fused_rel = []
-        for rel in self.from_atoms.all():
-            if rel.typ.fuse_into:
-                fused_rel += list(rel.to_atom.from_atoms.all())
+        for rel in self.to_atoms.all():
+            for orel in rel.from_atom.from_atoms.all():
+                if orel.typ.fuse_into and orel.to_atom != self:
+                    fused_rel.append( (orel.to_atom, rel.typ) )
         return fused_rel
 
 class AtomOrphanRelationship(models.Model):
@@ -153,4 +156,7 @@ class AtomRelationship(models.Model):
     from_atom = models.ForeignKey(Atom, related_name='from_atoms')
     to_atom = models.ForeignKey(Atom, related_name='to_atoms')
     typ = models.ForeignKey(AtomRelationshipType)
+
+    def __str__(self):
+        return str(self.from_atom) + ' -' + self.typ.slug + '> ' + str(self.to_atom)
 
