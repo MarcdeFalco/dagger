@@ -1,8 +1,8 @@
 {% extends 'theme_bootstrap/base.html' %}
 {% block nav %}
     <ul class="nav navbar-nav">
-        <li><a href="{% url 'atom_dag' %}">Graphe des connaissances</a></li>
-        <li><a href="{% url 'handout_list' %}">Liste des polys</a></li>
+        <li><a href="{% url 'atom_dag' %}">DAG</a></li>
+        <li><a href="{% url 'handout_list' %}">Polys</a></li>
         {% block extra_nav %}
         {% endblock %}
     </ul>
@@ -55,6 +55,9 @@
 {% endblock %}
 {% block extra_head %}
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jsxgraph/0.99.3/jsxgraphcore.js"></script>
+<script type="text/javascript">
+    window.addEventListener("hashchange", function() { scrollBy(0, -50) })
+</script>
 {% endblock %}
 {% block extra_style %}
 <link rel="stylesheet" type="text/css" href="/static/fluent_comments/css/ajaxcomments.css" />

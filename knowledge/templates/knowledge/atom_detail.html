@@ -6,11 +6,45 @@
     <li><a href="{% url 'admin:knowledge_atom_change' atom.id %}?source=main">Editer</a></li>
 {% endblock %}
 
+{% block local_script %}
+<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+
+$('a[href^="/detail/"]').qtip({
+    content: {
+        text: function(event, api) {
+            $.ajax({
+                url: this.attr('href')//elemen.data('url') // Use data-url attribute for the URL
+            })
+            .then(function(content) {
+                // Set the tooltip content upon successful retrieval
+                api.elements.content.html(
+                    '<div id="mathtooltip"><p>'
+                    + $(content).find('#atom_text').html()
+                    + '</p></div>');
+                MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
+            }, function(xhr, status, error) {
+                // Upon failure... set the tooltip content to the status and error value
+                api.set('content.text', status + ': ' + error);
+            });
+
+            return 'Chargement...'; // Set some initial text
+        }
+    }
+});
+
+});
+</script>
+{% endblock %}
+
 {% block body %}
 <div class="page-header">
     <h2>
         <span class="label label-{{ atom.typ.bootstrap_label }}">{{ atom.typ }}</span>
         {% if atom.name %}{{ atom.name }}{% endif %}
+        {% if atom.slug %}{{ atom.slug }}{% else %}{{ atom.id }}{% endif %}
     </h2>
 </div>
 
@@ -44,14 +78,4 @@
         </div>
     </div>
 </div>
-
-<div class="page-header">
-    <h2>Commentaires</h2>
-</div>
-
-<div class="well">
-{% render_comment_list for atom %}
-{% render_comment_form for atom %}
-</div>
-
 {% endblock %}

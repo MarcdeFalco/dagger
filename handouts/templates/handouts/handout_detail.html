@@ -1,6 +1,40 @@
 {% extends 'site_base.html' %}
 {% load atom %}
+{% load handout %}
 {% load mptt_tags %}
+
+{% block local_script %}
+<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+
+$('a[href^="/detail/"]').qtip({
+    content: {
+        text: function(event, api) {
+            $.ajax({
+                url: this.attr('href')//elemen.data('url') // Use data-url attribute for the URL
+            })
+            .then(function(content) {
+                // Set the tooltip content upon successful retrieval
+                api.elements.content.html(
+                    '<div id="mathtooltip"><p>'
+                    + $(content).find('#atom_text').html()
+                    + '</p></div>');
+                MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
+            }, function(xhr, status, error) {
+                // Upon failure... set the tooltip content to the status and error value
+                api.set('content.text', status + ': ' + error);
+            });
+
+            return 'Chargement...'; // Set some initial text
+        }
+    }
+});
+
+});
+</script>
+{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -18,6 +52,16 @@
 {% endblock %}
 
 {% block extra_nav %}
+    <li class="dropdown">
+    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><b>{{ handout.lead.name }}</b><span class="caret"></span></a>
+        <ul class="dropdown-menu">
+{% for node,structure in handout.lead.get_descendants|tree_info %}
+        {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
+            <a href="#node_{{ node.id }}">{{ node|paragraph_number }} - {{ node.name }}</a>
+        {% for level in structure.closed_levels %}</li></ul>{% endfor %}
+{% endfor %}
+        </ul>
+    </li>
     <li><a href="{% url 'admin:handouts_handout_change' handout.id %}?source=main">Editer</a></li>
 {% endblock %}
 
@@ -25,7 +69,7 @@
 <h2>{{ handout.lead.name }} <a href="{% url "handout_dag" pk=handout.pk %}">(DAG)</a></h2>
 {% for node,structure in handout.lead.get_descendants|tree_info %}
     {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
-        <h3><strong>{{ node.name }}</strong></h3>
+        <h3 id="node_{{ node.id }}"><strong>{{ node|paragraph_number }} - {{ node.name }}</strong></h3>
     {% for par in node.paragraphcontainsatoms_set.all %}
         {% if par.lead_in %}
         <p>
