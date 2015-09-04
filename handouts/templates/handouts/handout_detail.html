@@ -6,34 +6,7 @@
 {% block local_script %}
 <link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
-<script type="text/javascript">
-$(document).ready(function(){
-
-$('a[href^="/detail/"]').qtip({
-    content: {
-        text: function(event, api) {
-            $.ajax({
-                url: this.attr('href')//elemen.data('url') // Use data-url attribute for the URL
-            })
-            .then(function(content) {
-                // Set the tooltip content upon successful retrieval
-                api.elements.content.html(
-                    '<div id="mathtooltip"><p>'
-                    + $(content).find('#atom_text').html()
-                    + '</p></div>');
-                MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
-            }, function(xhr, status, error) {
-                // Upon failure... set the tooltip content to the status and error value
-                api.set('content.text', status + ': ' + error);
-            });
-
-            return 'Chargement...'; // Set some initial text
-        }
-    }
-});
-
-});
-</script>
+<script type="text/javascript" src="/static/knowledge/atom_preview.js">
 {% endblock %}
 
 {% block extra_style %}

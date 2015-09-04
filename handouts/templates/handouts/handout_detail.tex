@@ -1,0 +1,47 @@
+{% load atom %}
+{% load handout %}
+{% load mptt_tags %}
+\documentclass{article}
+
+
+\newcounter{depthcounter}
+\setcounter{depthcounter}{0}
+\newcommand{\currentsection}[1]{%
+    \ifnum\value{depthcounter}=1%
+        \section{#1}%
+    \fi%
+    \ifnum\value{depthcounter}=2%
+        \subsection{#1}%
+    \fi%
+    \ifnum\value{depthcounter}=3%
+        \subsubsection{#1}%
+    \fi%
+    \ifnum\value{depthcounter}=4%
+        \paragraph{#1}%
+    \fi%
+}
+
+\begin{document}
+\begin{center}
+    \Huge {{ handout.lead.name|safe }} 
+\end{center}
+% TODO insert DAG
+{% for node,structure in handout.lead.get_descendants|tree_info %}
+    {% if structure.new_level %}\stepcounter{depthcounter}{% endif %}
+    \currentsection{ {{ node.name|safe }} }
+    {% for par in node.paragraphcontainsatoms_set.all %}
+        {% if par.lead_in %}
+        {{ par.lead_in|safe }}
+        {% endif %}
+        {{ par.atom.typ|safe }}
+                    
+        {% if par.atom.name %}{{ par.atom.name }}{% endif %}
+
+        {{ par.atom.text|safe }}
+        {% if par.lead_out %}
+        {{ par.lead_out|safe }}
+        {% endif %}
+    {% endfor %}
+    {% for level in structure.closed_levels %}\addtocounter{depthcounter}{-1}{% endfor %}
+{% endfor %}
+\end{document}

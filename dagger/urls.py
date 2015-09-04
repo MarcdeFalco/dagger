@@ -20,6 +20,5 @@ urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r"^account/", include("account.urls")),
     url('^h/', include('handouts.urls')),
-    url(r'^comments/', include('fluent_comments.urls')),
     url('^', include('knowledge.urls')),
 ]

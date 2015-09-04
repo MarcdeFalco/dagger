@@ -1,11 +1,19 @@
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView, TemplateView, UpdateView, CreateView, FormView, RedirectView, DeleteView, View
+from django.http import HttpResponseForbidden, HttpResponseRedirect, HttpResponse, Http404
 
 from handouts.models import *
 
 class HandoutDetail(DetailView):
     model = Handout
     context_object_name = 'handout' 
+
+class TexHandoutDetail(DetailView):
+    model = Handout
+    context_object_name = 'handout' 
+    template_name = 'handouts/handout_detail.tex'
+    content_type = 'application/tex'
+
 
 class HandoutList(ListView):
     model = Handout

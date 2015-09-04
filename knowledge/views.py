@@ -4,6 +4,9 @@ from django.views.generic import ListView, DetailView, TemplateView, UpdateView,
 
 from django import forms
 
+from django.http import HttpResponse
+import json
+
 from knowledge.models import *
 import re
 
@@ -19,6 +22,38 @@ class AtomDOT(ListView):
     #def get(self, request, *args, **kwargs):
     #    template = loader.get_template(self.template_name)
     #    response = HttpResponse(
+
+class AtomDAGjson(ListView):
+    model = Atom
+    context_object_name = 'atoms' 
+
+    def get_queryset(self):
+        return Atom.objects.filter(typ__important=True)
+
+    def get(self, request, *args, **kwargs):
+        atoms = self.get_queryset()
+
+        graph = { 'nodes' : [], 'links' : [] }
+        in_graph_id = {}
+        for atom in atoms:
+            a = { 'name' : str(atom), 'group' : atom.typ.id }
+            a['url'] = atom.get_absolute_url()
+            a_id = len(graph['nodes'])
+            in_graph_id[atom.id] = a_id
+            graph['nodes'].append(a)
+
+        for atom in atoms:
+            a = { 'name' : atom.name, 'group' : atom.typ.id }
+            for rel in atom.from_atoms.all():
+                if rel.to_atom in atoms:
+                    link = { 'source' : in_graph_id[atom.id],
+                            'target' : in_graph_id[rel.to_atom.id],
+                            'value' : rel.typ.slug }
+                    graph['links'].append(link)
+
+        return HttpResponse(json.dumps(graph),
+                content_type='application/json')
+
 
 class AtomDAG(ListView):
     model = Atom

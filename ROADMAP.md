@@ -6,6 +6,7 @@
 * fix mouse interaction for the graph display
 * fix qtip tooltip (placement and Mathjax) in atom detail
 * LaTeX export or PDF export at least
+* define a viewing policy to restrict access ?
 
 = Done
 * navigation tab for handout (used a dropdown menu) (2015-08-16)

@@ -52,7 +52,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mptt',
-    'fluent_comments',
     'crispy_forms',
     'django_comments',
     'django.contrib.sites',
@@ -107,7 +106,6 @@ LOGGING = {
                 }
             }
         }
-COMMENTS_APP = 'fluent_comments'
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
