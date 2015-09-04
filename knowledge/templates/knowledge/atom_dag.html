@@ -6,536 +6,134 @@
 {% endcomment %}
 
 {% block footer %}
-Pour naviguer dans le graphe utilisez les touches fléchés pour vous déplacer,
-et les touches + et - pour zoomer.
-<br/>
-En survolant un élément son contenu s'affiche. En cliquant dessus,
-on accède à son contenu dans une nouvelle fenêtre.
 {% endblock %}
 
 {% block extra_style %}
-<style>
-#canvas {
-    width:100%;
-    height:100%;
-}
-#canvas.linkable{
-  cursor:pointer;
-}
-</style>
 <link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+</style>
 {% endblock %}
 
 {% block local_script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
-<script src="/static/knowledge/easeljs.min.js"></script>
 <script type="text/javascript">
+$(document).ready(function(){
+    var width = 960, 
+        height = 500;
 
-function LightenDarkenColor(col, amt) {
-  
-    var usePound = false;
-  
-    if (col[0] == "#") {
-        col = col.slice(1);
-        usePound = true;
-    }
- 
-    var num = parseInt(col,16);
- 
-    var r = (num >> 16) + amt;
- 
-    if (r > 255) r = 255;
-    else if  (r < 0) r = 0;
- 
-    var b = ((num >> 8) & 0x00FF) + amt;
- 
-    if (b > 255) b = 255;
-    else if  (b < 0) b = 0;
- 
-    var g = (num & 0x0000FF) + amt;
- 
-    if (g > 255) g = 255;
-    else if (g < 0) g = 0;
- 
-    return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
-}
+    var color = d3.scale.category20();
 
-   $(document).ready(function(){
+    var force = d3.layout.force()
+        .charge(-120)
+        .linkDistance(30)
+        .size([width, height]);
 
-    var canvas = $('#canvas')[0];
-    var ctx = canvas.getContext('2d');
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
 
-    function initCanvasArea(cnv) {
-        cnv.width = window.innerWidth;
-        cnv.height = window.innerHeight;
-    }
+    d3.json("/dag/json/", function(error, graph) {
+      if (error) throw error;
 
-    var graph = {
-    {% for atom in atoms %}
-        {{atom.id}} : {
-            label : "{{ atom.slug }}",
-            type : "{{ atom.typ.bootstrap_label }}",
-            pos : { x: 1, y: 0 },
-            plotted : false,
-            url : "{% url 'atom_detail' atom.id %}",
-            name : "{{ atom }}",
-            incoming: { 
-                {% for rel in atom.from_atoms.all %}
-                    {% if rel.to_atom in atoms %}
-                        {{ rel.to_atom.id }} : "{{ rel.typ.slug }}",
-                    {% endif %}
-                {% endfor %}
-                {% for oatom,typ in atom.fuse_from_atoms %}
-                    {% if oatom in atoms %}
-                        {{ oatom.id }} : "{{ typ.slug }}",
-                    {% endif %}
-                {% endfor %}
-                },
-            outgoing: { 
-                {% for rel in atom.to_atoms.all %}
-                    {% if rel.from_atom in atoms %}
-                        {{ rel.from_atom.id }} : "{{ rel.typ.slug }}",
-                    {% endif %}
-                {% endfor %}
-                {% for oatom,typ in atom.fuse_to_atoms %}
-                    {% if oatom in atoms %}
-                        {{ oatom.id }} : "{{ typ.slug }}",
-                    {% endif %}
-                {% endfor %}
-                },
+      force
+          .nodes(graph.nodes)
+          .links(graph.links)
+          .start();
+
+      var link = svg.selectAll(".link")
+          .data(graph.links)
+        .enter().append("line")
+          .attr("class", "link")
+          .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+      var node = svg.selectAll(".node")
+          .data(graph.nodes)
+        .enter().append("circle")
+          .attr("class", "node")
+          .attr("r", 5)
+          .style("fill", function(d) { return color(d.group); })
+          .call(force.drag);
+
+      /*
+      node.append("title")
+          .text(function(d) { return d.name; });
+
+      $('svg circle').tipsy({ 
+        gravity: 'w', 
+        html: true, 
+        title: function() {
+          var d = this.__data__, c = color(d.group);
+          return '<span style="color:' + c + '">' + d.name + '</span>'; 
+        }
+      });
+      */
+
+      $('svg circle').qtip({
+        content: {
+            title: function(event, api) { 
+                return this.context.__data__.name;
+            },
+            text: function(event, api) {
+                $.ajax({
+                    url: this.context.__data__.url
+                })
+                .then(function(content) {
+                    // Set the tooltip content upon successful retrieval
+                    api.elements.content.html(
+                        '<div id="mathtooltip"><p>'
+                        + $(content).find('#atom_text').html()
+                        + '</p></div>');
+                    MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
+                }, function(xhr, status, error) {
+                    // Upon failure... set the tooltip content to the status and error value
+                    api.set('content.text', status + ': ' + error);
+                });
+
+                return 'Chargement...'; // Set some initial text
+            }
         },
-    {% endfor %}
-    };
-
-    var no_dep = new Array();
-
-    function has_nonplotted_incoming(atom) {
-        var a = graph[atom];
-        var nonplottedincoming = false;
-
-        for(var oatom in a.incoming) {
-            if (!graph[oatom].plotted) 
-                nonplottedincoming = true;
-        }
-
-        return nonplottedincoming;
-    i}
-
-    for (var atom in graph) {
-        if (!has_nonplotted_incoming(atom))
-            no_dep.push(atom);
-    }
-    var ordered = new Array();
-
-    while(no_dep.length > 0) {
-        var atom = no_dep[0];
-        no_dep.shift();
-        
-        if (graph[atom].plotted)
-            continue;
-
-        ordered.push(atom);
-
-        graph[atom].plotted = true;
-        for (var oatom in graph[atom].outgoing) {
-            if (!has_nonplotted_incoming(oatom)) {
-                no_dep.unshift(oatom);
+        events: {
+            hide: function () {
+                $(this).qtip('destroy');
             }
-        }
-    }
-
-    var visited = {};
-    var ugraph = {};
-    for (var atom in graph) {
-        visited[atom] = false;
-        ugraph[atom] = new Array();
-        for (var iatom in graph[atom].incoming) {
-            ugraph[atom].push( iatom );
-        }
-        for (var oatom in graph[atom].outgoing) {
-            ugraph[atom].push( oatom );
-        }
-    }
-
-    function getNextUnvisited() {
-        for (var atom in graph) {
-            if (!visited[atom])
-                return atom;
-        }
-
-        return null;
-    }
-    
-    var component_index = 0;
-
-    while (true) {
-        var x = getNextUnvisited();
-        if (x == null)
-            break;
-        var tovisit = new Array();
-        tovisit.push(x);
-
-        while (tovisit.length > 0) {
-            x = tovisit[tovisit.length - 1];
-            tovisit.pop();
-
-            if (visited[x]) 
-                continue;
-
-            visited[x] = true;
-            if (graph[x] == null) alert(x);
-            graph[x]['component'] = component_index;  
-
-            for (var i in ugraph[x]) {
-                var oatom = ugraph[x][i];
-                if (!visited[oatom]) {
-                    tovisit.push(oatom);
-                }
-            }
-        }
-
-        component_index++;
-    }
-
-    var min_y = 0;
-
-    for (var i = 0; i < component_index; i++) {
-        var buckets = new Array();
-
-        for (var j = 0; j < ordered.length; j++) {
-            if (graph[ordered[j]].component != i)
-                continue;
-
-            var previous_x = -1;
-    
-            var atom = ordered[j];
-            for (var oatom in graph[atom].incoming) {
-                if (graph[oatom].pos.x > previous_x)
-                    previous_x = graph[oatom].pos.x;
-            }
-            var current_x = previous_x + 1;
-            graph[atom].pos.x = current_x;
-
-            while (current_x >= buckets.length)
-                buckets.push( new Array() );
-
-            buckets[current_x].push( atom );
-        }
-
-        var max_count = 0;
-        for (var x in buckets) {
-            if (buckets[x].length > max_count)
-                max_count = buckets[x].length;
-        }
-
-        var max_y = min_y + max_count;
-        function averageIncomingY(atom) {
-            var my = 0;
-            var degree = 0;
-            for (var oatom in graph[atom].incoming) {
-                degree++;
-                my += graph[oatom].pos.y;
-            }
-            if (degree > 0)
-                return my / degree;
-            else
-                return 0;
-        }
-
-        for (var x in buckets) {
-            buckets[x].sort(function(a,b) { return averageIncomingY(a) - averageIncomingY(b); });
-
-            var spread = new Array();
-            for (var j = 0; j < buckets[x].length; j++) {
-                var y = min_y + (max_y - min_y) * (j+0.5) / (buckets[x].length);
-                spread.push(y);
-            }
-
-            function shouldSwap(a1, j1, a2, j2) {
-                var y1 = spread[j1];
-                var y2 = spread[j2];
-
-                var crossings12 = 0;
-                var crossings21 = 0;
-                for (var oa1 in graph[a1].incoming) {
-                    for (var oa2 in graph[a2].incoming) {
-                        var oy1 = graph[oa1].pos.y;
-                        var oy2 = graph[oa2].pos.y;
-    
-                        if (oy1 < oy2)
-                            if (y1 < y2) crossings12++;
-                            else crossings21++;
-                        else
-                            if (y1 >= y2) crossings12++;
-                            else crossings21++;
-                    }
-                }
-
-                return crossings21 < crossings12;
-            }
-
-            // Maximum 5 iterations of swapping
-            for (var kk = 0; kk < 5; kk++) {
-                var swap = 0;
-
-                for (var j = 0; j < buckets[x].length - 1; j++) {
-                    if (!shouldSwap(buckets[x][j], j, buckets[x][j+1], j+1))
-                    {
-                        var z = buckets[x][j];
-                        buckets[x][j] = buckets[x][j+1];
-                        buckets[x][j+1] = z;
-
-                        swap++;
-                    }
-                }
-    
-                if (swap == 0) break;
-            } 
-
-            for (var j = 0; j < buckets[x].length; j++) {
-                var atom = buckets[x][j];
-                graph[atom].pos.y = spread[j];
-            }
-        }
-
-        min_y = max_y;
-    }
-
-    var stage = new createjs.Stage("canvas");
-
-    var graph_container = new createjs.Container();
-
-    window.onresize = function(e) {
-        initCanvasArea(canvas);
-        stage.update();
-    };
-
-    stage.enableMouseOver();
-
-    var WIDTH = 80;
-    var XSEP = 4*WIDTH;
-    var YSEP = 0;
-    var MARGIN = 50;
-    var INNER_MARGIN = 5;
-
-    var colors = {
-        default: "#858585",
-        success: "#5cb85c",
-        primary: "#337ab7",
-        info: "#5bc0de",
-        warning: "#f0ad4e",
-        danger: "#d9534f",
-    };
-
-    for (var atom in graph) {
-        var x = graph[atom].pos.x;
-        var y = graph[atom].pos.y;
-        for (var oatom in graph[atom].outgoing) {
-            var edge = new createjs.Shape();
-
-            var ox = graph[oatom].pos.x;
-            var oy = graph[oatom].pos.y;
-
-            var rx = MARGIN + (WIDTH+XSEP)*x + XSEP/2 + WIDTH;
-            var ry = MARGIN + (WIDTH+YSEP)*y + YSEP/2 + WIDTH/2;
-            var rox = MARGIN + (WIDTH+XSEP)*ox + XSEP/2;
-            var roy = MARGIN + (WIDTH+YSEP)*oy + YSEP/2 + WIDTH/2;
-
-            var text_y = (ry+roy)/2;
-
-            edge.graphics
-                    .beginStroke("black")
-                    .moveTo(rx, ry)
-                    .bezierCurveTo(rx+XSEP/2,ry,
-                        rox-XSEP/2,roy, rox, roy);
-
-            var radian = Math.atan2( (roy-ry), (rox-rx) );
-            var degree = radian / Math.PI * 180;
-
-            var arrow = new createjs.Shape();
-            arrow.graphics
-                .beginFill(createjs.Graphics.getRGB(0, 0, 0))
-                .moveTo(5, 5).lineTo(0,0).lineTo(5,-5);
-            arrow.x = rx;
-            arrow.y = ry;
-            arrow.rotation = degree;
-
-            if (graph[atom].outgoing[oatom] != 'necessite') {
-                var container = new createjs.Container();
-
-                var text = new createjs.Text(
-                        graph[atom].outgoing[oatom],
-                        "8px arial", "white");
-                var b = text.getBounds();
-
-                var margin = 5;
-
-                container.x = (rx+rox)/2 - b.width/2 - margin/2;
-                container.y = text_y - margin/2;
-                container.setBounds(0, 0, b.width+margin, b.height+margin);
-
-                text.x = margin/2;
-                text.y = margin/2;
-
-                var rect = new createjs.Shape();
-                rect.graphics
-                    .beginStroke('black')
-                    .beginFill('#333333')
-                    .setStrokeStyle(1)
-                    .drawRoundRectComplex(0, 0, 
-                            b.width+margin, b.height+margin,
-                            1, 1, 1, 1);
-
-                container.addChild(rect);
-                container.addChild(text);
-            }
-
-            graph_container.addChild(arrow);
-            graph_container.addChild(edge);
-            graph_container.addChild(container);
-
-        }
-    }
-
-    $.each(graph, function(atom) {
-        var x = graph[atom].pos.x;
-        var y = graph[atom].pos.y;
-
-        var container = new createjs.Container();
-        container.x = MARGIN + (WIDTH+XSEP)*x + XSEP/2;
-        container.y = MARGIN + (WIDTH+YSEP)*y + YSEP/2;
-        container.setBounds(0, 0, WIDTH, WIDTH);
-
-        var url = graph[atom].url;
-
-        container.on("click", function(e, url) {
-            window.open(url);
-        }, null, false, url);
-        container.on("mouseover", function(e, url) {
-            $(canvas).addClass('linkable');
-            window.status = url;
-        }, null, false, url);
-        container.on("mouseout", function(e) {
-            $(canvas).removeClass('linkable');
-            window.status = "";
-        }, null, false, url);
-
-        var rect = new createjs.Shape();
-        var color = colors[graph[atom].type];
-
-                var text = new createjs.Text();
-        text.lineWidth = WIDTH - 2*INNER_MARGIN;
-        text.set({
-            text: graph[atom].name,
-            font: "bold 12px arial",
-            color: "white", 
-            textAlign: "center",
-        });
-        var b = text.getBounds();
-        text.x = WIDTH/2;
-        text.y = WIDTH/2 - b.height/2;
-
-        rect.graphics
-            .beginStroke(LightenDarkenColor(color,-20))
-            .setStrokeStyle(3)
-            .beginFill(color)
-            .drawRoundRectComplex(0, text.y - INNER_MARGIN, WIDTH, b.height +
-                    2*INNER_MARGIN, 5, 5, 5, 5);
-
-        container.addChild(rect);
-
-
-        container.addChild(text);
-        graph_container.addChild(container);
-
-        container.addEventListener('rollover', function(e) {
-            $('#canvas').qtip('api').reposition();
-            $('#canvas').qtip('api').show();
-            $('#canvas').qtip('api').set('content.text', 'Chargement...');
-
-            $.get('/detail/' + atom + '/', function(content) {
-                $('#canvas').qtip('api').elements.content.html(
-                    '<div id="mathtooltip">'
-                    + $(content).find('#atom_text').html()
-                    + '</div>');
-                MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
-            });
-        });
-
-        container.addEventListener('rollout', function(e) {
-            $('#canvas').qtip('api').set('content.text', '');
-            $('#canvas').qtip('api').hide();
-        });
+        },
+          style : {
+              tip : {
+                  corner: true
+              }
+          },
     });
 
-    
-    initCanvasArea(canvas);
 
-    stage.addChild(graph_container);
 
-    var bounds = graph_container.getBounds();
-    if (bounds.width > canvas.width || bounds.height > canvas.height) {
-        var wfactor = canvas.width / bounds.width;
-        var hfactor = canvas.height / bounds.height;
-        var zoom = wfactor;
-        if (hfactor < zoom) zoom = hfactor;
-        zoom *= 0.9;
-        graph_container.scaleX = graph_container.scaleY *= zoom;
-    }
+      force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
 
-    stage.update();
-
-    $(window).keydown(function(e){
-        switch (e.which || e.keyCode){
-            case 39: // right arrow key
-                graph_container.x -= 50;
-                stage.update();
-                break;
-            case 37: // left arrow key
-                graph_container.x += 50;
-                stage.update();
-                break;
-            case 40: // up arrow key
-                graph_container.y -= 50;
-                stage.update();
-                break;
-            case 38: // down arrow key
-                graph_container.y += 50;
-                stage.update();
-                break;
-            case 189: // minus
-                var local = graph_container.globalToLocal(stage.mouseX,
-                    stage.mouseY);
-                graph_container.regX=local.x;
-                graph_container.regY=local.y;
-                graph_container.x = stage.mouseX;
-                graph_container.y = stage.mouseY;
-                graph_container.scaleX = graph_container.scaleY *= 1/1.1;
-                stage.update();
-                break;
-            case 187: // plus
-                var local = graph_container.globalToLocal(stage.mouseX,
-                        stage.mouseY);
-                graph_container.regX=local.x;
-                graph_container.regY=local.y;
-                graph_container.x = stage.mouseX;
-                graph_container.y = stage.mouseY;
-                graph_container.scaleX = graph_container.scaleY *= 1.1;
-                stage.update();
-                break;
-        }
+        node.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+      });
     });
-    
-    $('#canvas').qtip({ 
-        position: { target: 'mouse' },
-        content: { text: 'Chargement...' }});
-    $('#canvas').qtip('api').hide();
+
 });
 </script>
 {% endblock %}
 
 {% block body_base %}
 <div class="container">
-    <canvas id="canvas" width="1000" height="600"></canvas>
 </div>
 {% endblock %}
