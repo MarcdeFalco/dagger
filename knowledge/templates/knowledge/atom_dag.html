@@ -5,29 +5,58 @@
 {% block jquery_src %}http://code.jquery.com/jquery-1.11.1.min.js{% endblock %}
 {% endcomment %}
 
-{% block footer %}
-{% endblock %}
 
 {% block extra_style %}
-<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.css"></script>
+<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.css"></link>
 <style>
-
-.node {
-  stroke: #fff;
-  stroke-width: 1.5px;
+g.node-primary > rect {
+    fill: #337ab7;
+}
+g.node-default > rect {
+    fill: #858585;
+}
+g.node-success > rect {
+    fill: #5cb85c;
+}
+g.node-info > rect {
+    fill: #5bc0de;
+}
+g.node-warning > rect {
+    fill: #f0ad4e;
+}
+g.node-danger > rect {
+    fill: #d9534f;
 }
 
-.link {
+/*
+text {
+  font-weight: "bold";
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+  font-size: 12px;
+}
+*/
+
+.node > text {
+  fill: "white";
+}
+
+.node > rect {
   stroke: #999;
-  stroke-opacity: .6;
+  fill: #fff;
+  stroke-width: 1px;
 }
 
+.edgePath path {
+  stroke: #000;
+  stroke-width: 1px;
+}
 </style>
 {% endblock %}
 
 {% block local_script %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/basic/jquery.qtip.min.js"></script>
+<script src="/static/knowledge/dagre-d3.js" charset="utf-8"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.js"></script>
 <script type="text/javascript">
 $(document).ready(function(){
     var width = 960, 
@@ -35,67 +64,102 @@ $(document).ready(function(){
 
     var color = d3.scale.category20();
 
+    /*
     var force = d3.layout.force()
-        .charge(-120)
-        .linkDistance(30)
+        .charge(-220)
+        .linkDistance(5)
         .size([width, height]);
+    */
 
-    var svg = d3.select("body").append("svg")
+    var svg = d3.select("#content_body").append("svg")
+        .attr('width', window.innerWidth)
+        .attr('height', window.innerHeight - 200);
+    var svgGroup = svg.append("g");
+      var g = new dagreD3.graphlib.Graph()
+        .setGraph({
+            rankdir: "RL",
+            marginx: 20,
+            ranksep: 100,
+            nodesep: 30
+        })
+        .setDefaultEdgeLabel(function() { return {}; });
+
+    var zoom = d3.behavior.zoom().on("zoom", function() {
+        svgGroup.attr("transform", "translate(" + d3.event.translate + ")" +
+                "scale(" + d3.event.scale + ")");
+        svgGroup.selectAll('g.node')
+            .each(function(v) {
+                $(this).qtip('reposition');
+            });
+    });
+    svg.call(zoom);
+    /*
         .attr("width", width)
         .attr("height", height);
+    */
 
-    d3.json("/dag/json/", function(error, graph) {
+
+    var render = new dagreD3.render();
+
+    d3.json("{{ json }}", function(error, graph) {
       if (error) throw error;
 
-      force
-          .nodes(graph.nodes)
-          .links(graph.links)
-          .start();
-
-      var link = svg.selectAll(".link")
-          .data(graph.links)
-        .enter().append("line")
-          .attr("class", "link")
-          .style("stroke-width", function(d) { return Math.sqrt(d.value); });
-
-      var node = svg.selectAll(".node")
-          .data(graph.nodes)
-        .enter().append("circle")
-          .attr("class", "node")
-          .attr("r", 5)
-          .style("fill", function(d) { return color(d.group); })
-          .call(force.drag);
-
-      /*
-      node.append("title")
-          .text(function(d) { return d.name; });
-
-      $('svg circle').tipsy({ 
-        gravity: 'w', 
-        html: true, 
-        title: function() {
-          var d = this.__data__, c = color(d.group);
-          return '<span style="color:' + c + '">' + d.name + '</span>'; 
-        }
+      $.each(graph.nodes, function(i,n) {
+          g.setNode(n.id, { label: n.name, full_label : n.full_name,
+              class : 'node-' + n.group,
+              url : n.url });
       });
-      */
+      $.each(graph.links, function(i,l) {
+          var value = { };
+          if (l.value != 'necessite') {
+              value.arrowhead = "vee";
+              value.label = l.value;
+          } else {
+              value.style = "fill:none; stroke-dasharray: 5, 5; stroke:#555; stroke-width:0.5px;";
+              value.arrowhead = "undirected";
+          }
+          value.lineInterpolate = 'basis';
+          g.setEdge(l.source, l.target, value);
+      });
 
-      $('svg circle').qtip({
+      g.nodes()
+        .forEach(function(v) {
+            var node = g.node(v);
+            node.rx = node.ry = 5;
+        });
+      render(d3.select("svg g"), g);
+      
+
+    svgGroup.selectAll('g.node')
+        .each(function(v) {
+            var node = g.node(v);
+
+            $(this).dblclick(function(e) {
+                window.location.href = node.url;
+            })
+                .qtip({
         content: {
             title: function(event, api) { 
-                return this.context.__data__.name;
+                return node.full_label;
             },
             text: function(event, api) {
                 $.ajax({
-                    url: this.context.__data__.url
+                    url: node.url
                 })
                 .then(function(content) {
                     // Set the tooltip content upon successful retrieval
-                    api.elements.content.html(
-                        '<div id="mathtooltip"><p>'
+                    var content = $('<div id="mathtooltip"><p>'
                         + $(content).find('#atom_text').html()
                         + '</p></div>');
-                    MathJax.Hub.Queue(["Typeset",MathJax.Hub,"mathtooltip"]);
+                    $('body').append(content);
+                    content.hide();
+                    MathJax.Hub.Queue(
+                            ["Typeset", MathJax.Hub, "mathtooltip"],
+                            function () {
+                                api.elements.content.html(content.html());
+                                api.reposition(null, false);
+                                content.remove();
+                            });
                 }, function(xhr, status, error) {
                     // Upon failure... set the tooltip content to the status and error value
                     api.set('content.text', status + ': ' + error);
@@ -104,36 +168,56 @@ $(document).ready(function(){
                 return 'Chargement...'; // Set some initial text
             }
         },
+        show: 'click', hide : 'click',
         events: {
-            hide: function () {
-                $(this).qtip('destroy');
-            }
         },
+          position : {
+              my: 'left center',
+              at: 'right center',
+              target: this,
+          },
           style : {
               tip : {
                   corner: true
               }
           },
     });
+    });
 
+    
+     var graph_height = g.graph().height;
+     var graph_width = g.graph().width;
+     var svg_width = svg.attr('width');
 
+      var ratio = g.graph().width / g.graph().height;
 
-      force.on("tick", function() {
-        link.attr("x1", function(d) { return d.source.x; })
-            .attr("y1", function(d) { return d.source.y; })
-            .attr("x2", function(d) { return d.target.x; })
-            .attr("y2", function(d) { return d.target.y; });
+      var ideal_height = svg.attr('width') / ratio;
+      var max_height = window.innerHeight
+        - $('.navbar').height() - 40
+        - $('footer').height() - 80;
+      if (ideal_height > max_height)
+          ideal_height = max_height;
+      svg.attr('height', ideal_height);
 
-        node.attr("cx", function(d) { return d.x; })
-            .attr("cy", function(d) { return d.y; });
-      });
+      var scale = svg.attr('height') / g.graph().height;
+      var scale_x = svg.attr('width') / g.graph().width;
+      if (scale_x < scale)
+          scale = scale_x;
+
+      var centerX = -(graph_width*scale - svg_width) / 2;
+      var centerY = -(graph_height*scale - ideal_height) / 2;
+
+      zoom.translate([centerX, centerY]).scale(scale);
+      zoom.event(svgGroup.transition().duration(500));
     });
 
 });
 </script>
 {% endblock %}
 
-{% block body_base %}
-<div class="container">
-</div>
+{% block content %}
+{% endblock %}
+{% block footer %}
+Cliquez sur un élément pour afficher un apercu, cliquez à nouveau pour le faire disparaitre.<br/>
+Navigation: Glisser-déposer depuis le fond du diagramme et zoom avec la molette.
 {% endblock %}

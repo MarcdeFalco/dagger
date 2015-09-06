@@ -34,21 +34,29 @@ class AtomDAGjson(ListView):
         atoms = self.get_queryset()
 
         graph = { 'nodes' : [], 'links' : [] }
-        in_graph_id = {}
         for atom in atoms:
-            a = { 'name' : str(atom), 'group' : atom.typ.id }
+            a = { 'id' : atom.id, 'group' : atom.typ.bootstrap_label }
+            if atom.slug:
+                a['name'] = atom.slug
+            else:
+                a['name'] = str(atom.id)
+            a['full_name'] = str(atom)
             a['url'] = atom.get_absolute_url()
-            a_id = len(graph['nodes'])
-            in_graph_id[atom.id] = a_id
             graph['nodes'].append(a)
 
         for atom in atoms:
             a = { 'name' : atom.name, 'group' : atom.typ.id }
             for rel in atom.from_atoms.all():
                 if rel.to_atom in atoms:
-                    link = { 'source' : in_graph_id[atom.id],
-                            'target' : in_graph_id[rel.to_atom.id],
+                    link = { 'source' : atom.id,
+                            'target' : rel.to_atom.id,
                             'value' : rel.typ.slug }
+                    graph['links'].append(link)
+            for to_atom, rel_typ in atom.fuse_from_atoms():
+                if to_atom in atoms:
+                    link = { 'source' : atom.id,
+                            'target' : to_atom.id,
+                            'value' : rel_typ.slug }
                     graph['links'].append(link)
 
         return HttpResponse(json.dumps(graph),
@@ -63,6 +71,7 @@ class AtomDAG(ListView):
     def get_context_data(self, *args, **kwargs):
         context = super(AtomDAG, self).get_context_data(*args, **kwargs)
         context['types'] = AtomRelationshipType.objects.all()
+        context['json'] = '/dag/json/'
         return context
 
     def get_queryset(self):

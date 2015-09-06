@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from mptt.models import MPTTModel, TreeForeignKey
-from knowledge.models import Atom, AtomRelationship
+from knowledge.models import Atom, AtomType, AtomRelationship
 from random import choice
 
 # Create your models here.
@@ -34,7 +34,28 @@ class ParagraphContainsAtoms(models.Model):
 
 class Handout(models.Model):
     lead = models.ForeignKey(Paragraph, blank=True, null=True, related_name='handout_as_lead')
-    code = models.TextField()
+    code = models.TextField(help_text='''
+Handout code format :<br/>
+<br/>
+Lead paragraph<br/>
+* Main paragraph<br/>
+** Sub paragraph<br/>
+<br/>
+In each paragraph, you can reference atoms:<br/>
+Direct reference<br/>
+- atom_by_ref<br/>
+Reference by relationships<br/>
+-> verb atom_by_ref [(all,random,first)]<br/>
+Create a new atom and reference it<br/>
+-{ typ_slug [slug [name]]<br/>
+Atom text goes here<br/>
+}<br/>
+<br/>
+After each atom references you can add text: <br/>
+text placed just before the atom to introduce it and can be multiline<br/>
+-- (optional separation and signal that )<br/>
+the following lines are to be placed after the atom<br/>
+''')
 
     def __str__(self):
         return self.lead.name
@@ -42,18 +63,6 @@ class Handout(models.Model):
     def save(self, *save_args, **kwargs):
         super(Handout, self).save(*save_args, **kwargs)
         old_lead = self.lead
-
-        # Handout code format :
-        # ---------------------
-        # Lead paragraph
-        # * Main paragraph
-        # ** Sub paragraph
-        # - atom_by_ref
-        # text placed just before the atom to introduce it
-        # and can be multiline
-        # -- (optional separation and sign that )
-        # the following lines are to be placed after the atom
-        # -> verb atom_by_ref [(all,random,first)]
 
         lines = self.code.replace('\r','').split('\n') 
         branch = []
@@ -63,6 +72,8 @@ class Handout(models.Model):
                 slug=slugify(lines[0]), handout=self)
         lead.save()
         branch = [ (lead, 1) ]
+
+        processed_lines = [lines[0]]
 
         def get_tag(i):
             if i >= len(lines):
@@ -78,10 +89,58 @@ class Handout(models.Model):
             tag = get_tag(i)
             i += 1
             if line == '':
+                processed_lines.append(line)
                 continue
-            if tag == '-':
-                ref = line.split()[1]
-                atom = Atom.objects.by_ref(ref)
+            if tag.startswith('-'):
+                if tag == '-':
+                    processed_lines.append(line)
+                    ref = line.split()[1]
+                    atom = Atom.objects.by_ref(ref)
+                elif tag == '->':
+                    processed_lines.append(line)
+                    args = line.split()
+                    verb = args[1]
+                    ref = args[2]
+
+                    # TODO
+                    mult = 'first'
+                    if len(args) > 3:
+                        mult = args[3]
+
+                    atom = Atom.objects.by_ref(ref)
+                    ar = AtomRelationship.objects.get(to_atom=atom,
+                            typ__slug=verb)
+                    atom = ar.from_atom
+                elif tag == '-{':
+                    args = line.split()
+                    typ_slug = args[1]
+                    slug = None
+                    name = None
+                    if len(args) > 2:
+                        slug = args[2]
+                        if len(args) > 3:
+                            name = ' '.join(args[3:])
+                    typ = AtomType.objects.get(slug=typ_slug)
+                    atom = Atom.objects.create(typ=typ)
+                    if slug:
+                        atom.slug = slug
+                    atom_text = []
+                    while i < len(lines):
+                        line = lines[i]
+                        i += 1
+                        if line != '' and line[0] == '}':
+                            break
+                        atom_text.append( line )
+                    atom.text = '\n'.join(atom_text)
+                    atom.slug = slug
+                    if name:
+                        atom.name = name
+                    atom.save()
+                    if slug:
+                        processed_lines.append('- ' + slug)
+                    else:
+                        processed_lines.append('- ' + str(atom.id))
+
                 paragraph, _ = branch[-1]
                 lead_in = []
                 lead_out = []
@@ -89,14 +148,17 @@ class Handout(models.Model):
                 while i < len(lines):
                     t = get_tag(i)
                     if not t:
+                        processed_lines.append(lines[i])
                         i += 1
                         continue
                     if t == '--':
                         leading_out = True
+                        processed_lines.append(lines[i])
                         i += 1
                         continue
                     if t[0] in ['-', '*']:
                         break
+                    processed_lines.append(lines[i])
                     if leading_out:
                         lead_out.append( lines[i].strip() )
                     else:
@@ -109,24 +171,8 @@ class Handout(models.Model):
                         lead_in=lead_in, lead_out=lead_out)
                 pca.save()
                 suborder += 1
-            elif tag == '->':
-                args = line.split()
-                verb = args[1]
-                ref = args[2]
-
-                mult = 'first'
-                if len(args) > 3:
-                    mult = args[3]
-
-                atom = Atom.objects.by_ref(ref)
-                ar = AtomRelationship.objects.get(to_atom=atom,
-                        typ__slug=verb)
-                paragraph, _ = branch[-1]
-                pca = ParagraphContainsAtoms.objects.create(paragraph=paragraph,
-                        atom=ar.from_atom, order=suborder)
-                pca.save()
-                suborder += 1
             elif set(tag) == {'*'}:
+                processed_lines.append(line)
                 suborder = 1
                 level = 1 + len(tag)
                 name = line.strip()[len(tag):].strip()
@@ -143,8 +189,8 @@ class Handout(models.Model):
                         parent=parent, order=order, handout=self)
                 par.save()
                 branch.append( (par, order) )
-
         self.lead = lead
+        self.code = '\n'.join(processed_lines)
         super(Handout, self).save(*save_args, **kwargs)
         if old_lead:
             old_lead.delete()

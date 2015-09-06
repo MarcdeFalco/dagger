@@ -8,8 +8,11 @@
     </ul>
 {% endblock %}
 {% block extra_script %}
-{% block local_script %}
-{% endblock %}
+<script>
+$(document).ready(function() {
+    $('table').addClass('table');
+});
+</script>
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js">
         MathJax.Hub.Config({
             config: ["MMLorHTML.js"],
@@ -42,8 +45,9 @@
                   ensfonctions: ['{\\mathcal{F}(#1,#2)}', 2],
                   plage: ['{[[#1,#2]]}', 2],
                   range: ['{[[1,#1]]}', 1],
+                  dom: '{\\mbox{dom}}',
                   indic: '{\\boldsymbol{1}}',
-                  id: '{id}',
+                  id: '{\\mbox{id}}',
                   rR: '{\\mathcal{R}}',
                   application: ['{\\begin{array}{rcccc}#1 & : & #2 & \\mapsto & #3 \\\\ & & #4 & \\mapsto & #5 \\end{array}}', 5],
                 }
@@ -51,6 +55,8 @@
             showProcessingMessages: false
         });
 </script>
+{% block local_script %}
+{% endblock %}
 {% endblock %}
 {% block extra_head %}
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jsxgraph/0.99.3/jsxgraphcore.js"></script>
