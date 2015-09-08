@@ -136,6 +136,7 @@ TEMPLATES = [
                 'django.core.context_processors.request',
                 'pinax_theme_bootstrap.context_processors.theme',
                 'account.context_processors.account',
+                'handouts.context_processors.handouts_menu',
             ],
         },
     },

@@ -7,7 +7,7 @@
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.js"></script>
 <script type="text/javascript" src="/static/knowledge/atom_preview.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-<script src="/static/knowledge/dagre-d3.js" charset="utf-8"></script>
+<script src="/static/knowledge/dagre-d3.min.js" charset="utf-8"></script>
 <script type="text/javascript">
 $(document).ready(function(){
     var color = d3.scale.category20();
@@ -72,21 +72,21 @@ $(document).ready(function(){
         });
       render(d3.select("svg g"), g);
       
-     var graph_height = g.graph().height;
+     var graph_height = g.graph().height + 20;
      var graph_width = g.graph().width;
      var svg_width = svg.attr('width');
 
-      var ratio = g.graph().width / g.graph().height;
+      var ratio = g.graph().width / graph_height;
       var ideal_height = svg.attr('width') / ratio;
       svg.attr('height', ideal_height);
 
-      var scale = svg.attr('height') / g.graph().height;
+      var scale = svg.attr('height') / graph_height;
       var scale_x = svg.attr('width') / g.graph().width;
       if (scale_x < scale)
           scale = scale_x;
 
       var centerX = -(graph_width*scale - svg_width) / 2;
-      var centerY = -(graph_height*scale - ideal_height) / 2;
+      var centerY = -(graph_height*scale - ideal_height) / 2 + 20;
 
       zoom.translate([centerX, centerY]).scale(scale);
       zoom.event(svgGroup.transition().duration(100));
@@ -183,14 +183,14 @@ text {
 }
 */
 
-.node > text {
-  fill: "white";
+.node text {
+  fill: white;
 }
 
 .node > rect {
-  stroke: #999;
+  stroke: #555;
   fill: #fff;
-  stroke-width: 1px;
+  stroke-width: 2px;
 }
 
 .edgePath path {
@@ -209,7 +209,7 @@ text {
 .panel-preuve {
     background-color: #fee !important;
 }
-ul {
+ul .structure {
     margin-left: 0;
     padding-left: 0;
 }
@@ -219,7 +219,7 @@ ul {
 {% block extra_nav %}
     <li class="dropdown">
     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
-        aria-haspopup="true" aria-expanded="false"><b>{{ handout.lead.name|slice:":25" }}...</b><span class="caret"></span></a>
+        aria-haspopup="true" aria-expanded="false"><b>{{ handout.lead.name|slice:":50" }}...</b><span class="caret"></span></a>
         <ul class="dropdown-menu">
 {% for node,structure in handout.lead.get_descendants|tree_info %}
         {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
@@ -242,7 +242,7 @@ Navigation: Glisser-déposer depuis le fond du diagramme et zoom avec la molette
     <svg></svg>
 </div>
 {% for node,structure in handout.lead.get_descendants|tree_info %}
-    {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
+    {% if structure.new_level %}<ul class="structure"><li>{% else %}</li><li>{% endif %}
         <h3 id="node_{{ node.id }}"><strong>{{ node|paragraph_number }} - {{ node.name }}</strong></h3>
     {% for par in node.paragraphcontainsatoms_set.all %}
         {% if par.lead_in %}

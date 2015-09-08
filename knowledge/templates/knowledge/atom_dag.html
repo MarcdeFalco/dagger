@@ -36,14 +36,14 @@ text {
 }
 */
 
-.node > text {
-  fill: "white";
+.node text {
+  fill: white;
 }
 
 .node > rect {
-  stroke: #999;
+  stroke: #555;
   fill: #fff;
-  stroke-width: 1px;
+  stroke-width: 2px;
 }
 
 .edgePath path {
@@ -55,7 +55,7 @@ text {
 
 {% block local_script %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-<script src="/static/knowledge/dagre-d3.js" charset="utf-8"></script>
+<script src="/static/knowledge/dagre-d3.min.js" charset="utf-8"></script>
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.js"></script>
 <script type="text/javascript">
 $(document).ready(function(){
@@ -185,11 +185,11 @@ $(document).ready(function(){
     });
 
     
-     var graph_height = g.graph().height;
+     var graph_height = g.graph().height + 20;
      var graph_width = g.graph().width;
      var svg_width = svg.attr('width');
 
-      var ratio = g.graph().width / g.graph().height;
+      var ratio = g.graph().width / graph_height;
 
       var ideal_height = svg.attr('width') / ratio;
       var max_height = window.innerHeight
@@ -199,13 +199,13 @@ $(document).ready(function(){
           ideal_height = max_height;
       svg.attr('height', ideal_height);
 
-      var scale = svg.attr('height') / g.graph().height;
+      var scale = svg.attr('height') / graph_height;
       var scale_x = svg.attr('width') / g.graph().width;
       if (scale_x < scale)
           scale = scale_x;
 
       var centerX = -(graph_width*scale - svg_width) / 2;
-      var centerY = -(graph_height*scale - ideal_height) / 2;
+      var centerY = -(graph_height*scale - ideal_height) / 2 + 20;
 
       zoom.translate([centerX, centerY]).scale(scale);
       zoom.event(svgGroup.transition().duration(500));
