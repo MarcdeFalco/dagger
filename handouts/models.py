@@ -34,6 +34,7 @@ class ParagraphContainsAtoms(models.Model):
 
 class Handout(models.Model):
     lead = models.ForeignKey(Paragraph, blank=True, null=True, related_name='handout_as_lead')
+    cluster = models.BooleanField(default=False)
     code = models.TextField(help_text='''
 Handout code format :<br/>
 <br/>

@@ -61,9 +61,10 @@ class AtomDAGjson(ListView):
 
         import handouts
         for handout in handouts.models.Handout.objects.all():
-            graph['clusters'].append( { 'id' : handout.id,
-                'name' : handout.lead.name,
-                'atoms' : [ atom.id for atom in handout.atoms() ] } )
+            if handout.cluster:
+                graph['clusters'].append( { 'id' : handout.id,
+                    'name' : handout.lead.name,
+                    'atoms' : [ atom.id for atom in handout.atoms() ] } )
 
 
         return HttpResponse(json.dumps(graph),
