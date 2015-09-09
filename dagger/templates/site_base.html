@@ -7,7 +7,7 @@
             aria-haspopup="true" aria-expanded="false">Polys<span class="caret"></span></a>
             <ul class="dropdown-menu">
             {% for handout in handouts_menu %}
-                <li><a href{% url "handout_detail" pk=handout.id %}">{{ handout}}</a></li>
+                <li><a href="{% url "handout_detail" pk=handout.id %}">{{ handout}}</a></li>
             {% endfor %}
             </ul>
         </li>
