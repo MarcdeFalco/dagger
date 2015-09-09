@@ -9,6 +9,11 @@
 {% block extra_style %}
 <link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.1/jquery.qtip.min.css"></link>
 <style>
+.clusters rect {
+  fill: #d3d7e8;
+  stroke: #999;
+  stroke-width: 1.5px;
+}
 g.node-primary > rect {
     fill: #337ab7;
 }
@@ -75,7 +80,7 @@ $(document).ready(function(){
         .attr('width', window.innerWidth)
         .attr('height', window.innerHeight - 200);
     var svgGroup = svg.append("g");
-      var g = new dagreD3.graphlib.Graph()
+    var g = new dagreD3.graphlib.Graph({compound:true})
         .setGraph({
             rankdir: "RL",
             marginx: 20,
@@ -122,13 +127,22 @@ $(document).ready(function(){
           g.setEdge(l.source, l.target, value);
       });
 
+
+      $.each(graph.clusters, function(i,c) {
+          g.setNode('H' + c.id, { label: c.name, clusterLabelPos: 'top' });
+          $.each(c.atoms, function(j,a) {
+              g.setParent(a, 'H' + c.id);
+          });
+      });
+
       g.nodes()
         .forEach(function(v) {
             var node = g.node(v);
             node.rx = node.ry = 5;
         });
+
       render(d3.select("svg g"), g);
-      
+
 
     svgGroup.selectAll('g.node')
         .each(function(v) {

@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 from mptt.models import MPTTModel, TreeForeignKey
 from knowledge.models import Atom, AtomType, AtomRelationship
-from random import choice
+# from random import choice
 
 # Create your models here.
 
@@ -57,6 +57,16 @@ text placed just before the atom to introduce it and can be multiline<br/>
 the following lines are to be placed after the atom<br/>
 ''')
 
+    def atoms(self):
+        atoms = []
+
+        for paragraph in self.lead.get_descendants(include_self=True):
+            for atom in paragraph.content.filter(typ__important=True):
+                if atom not in atoms:
+                    atoms.append(atom)
+
+        return atoms
+
     def __str__(self):
         return self.lead.name
 
@@ -103,9 +113,9 @@ the following lines are to be placed after the atom<br/>
                     ref = args[2]
 
                     # TODO
-                    mult = 'first'
-                    if len(args) > 3:
-                        mult = args[3]
+                    # mult = 'first'
+                    # if len(args) > 3:
+                    #    mult = args[3]
 
                     atom = Atom.objects.by_ref(ref)
                     ar = AtomRelationship.objects.get(to_atom=atom,

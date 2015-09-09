@@ -33,7 +33,7 @@ class AtomDAGjson(ListView):
     def get(self, request, *args, **kwargs):
         atoms = self.get_queryset()
 
-        graph = { 'nodes' : [], 'links' : [] }
+        graph = { 'nodes' : [], 'links' : [], 'clusters' : [] }
         for atom in atoms:
             a = { 'id' : atom.id, 'group' : atom.typ.bootstrap_label }
             if atom.slug:
@@ -58,6 +58,13 @@ class AtomDAGjson(ListView):
                             'target' : to_atom.id,
                             'value' : rel_typ.slug }
                     graph['links'].append(link)
+
+        import handouts
+        for handout in handouts.models.Handout.objects.all():
+            graph['clusters'].append( { 'id' : handout.id,
+                'name' : handout.lead.name,
+                'atoms' : [ atom.id for atom in handout.atoms() ] } )
+
 
         return HttpResponse(json.dumps(graph),
                 content_type='application/json')
