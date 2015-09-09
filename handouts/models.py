@@ -22,6 +22,9 @@ class Paragraph(MPTTModel):
         level_attr = 'mptt_level'
         order_insertion_by=['order']
 
+    class Meta:
+        ordering = ['name',]
+
 class ParagraphContainsAtoms(models.Model):
     paragraph = models.ForeignKey(Paragraph)
     lead_in = models.TextField(blank=True)
@@ -57,6 +60,9 @@ text placed just before the atom to introduce it and can be multiline<br/>
 -- (optional separation and signal that )<br/>
 the following lines are to be placed after the atom<br/>
 ''')
+
+    class Meta:
+        ordering = ['lead',]
 
     def atoms(self):
         atoms = []
